@@ -1,22 +1,20 @@
-import React from 'react';
+// src/components/DebugTeamLoading.tsx
+import React, { useState, useEffect } from 'react';
 import { TeamCodeService } from '../services/teamCodeService';
 
-const DebugTeamLoading: React.FC = () => {
-  const [debugInfo, setDebugInfo] = React.useState<string[]>([]);
+interface DebugTeamLoadingProps {
+  onClose: () => void;
+}
 
-  React.useEffect(() => {
+const DebugTeamLoading: React.FC<DebugTeamLoadingProps> = ({ onClose }) => {
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
+
+  const runDebug = async () => {
+    console.log('🔍 === AVVIO DEBUG TEAM LOADING ===');
+
     const logs: string[] = [];
 
-    // Debug URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    logs.push(`🌐 URL completo: ${window.location.href}`);
-    logs.push(
-      `🔍 Parametri URL: ${Array.from(urlParams.entries())
-        .map(([k, v]) => `${k}=${v}`)
-        .join(', ')}`
-    );
-
-    // Debug team data from URL
+    // Debug embedded team data in URL
     const teamData = TeamCodeService.getTeamDataFromUrl();
     if (teamData) {
       logs.push(
@@ -26,28 +24,36 @@ const DebugTeamLoading: React.FC = () => {
       logs.push(`❌ Nessun dato team embedded nell'URL`);
     }
 
-    // Debug team code from URL
+    // Debug team code from URL (async)
     const teamCode = TeamCodeService.getTeamCodeFromUrl();
     if (teamCode) {
       logs.push(`🔗 Codice team dall'URL: ${teamCode}`);
-      const existingTeam = TeamCodeService.loadTeam(teamCode);
-      if (existingTeam) {
-        logs.push(`✅ Team locale trovato: ${existingTeam.name}`);
-      } else {
-        logs.push(`❌ Team locale NON trovato per codice ${teamCode}`);
+      try {
+        const existingTeam = await TeamCodeService.loadTeam(teamCode);
+        if (existingTeam) {
+          logs.push(`✅ Team locale trovato: ${existingTeam.name}`);
+        } else {
+          logs.push(`❌ Team locale NON trovato per codice ${teamCode}`);
+        }
+      } catch (error) {
+        logs.push(`❌ Errore caricamento team: ${error}`);
       }
     } else {
       logs.push(`❌ Nessun codice team nell'URL`);
     }
 
-    // Debug localStorage
-    const currentTeam = TeamCodeService.getCurrentTeam();
-    if (currentTeam) {
-      logs.push(
-        `💾 Team corrente nel localStorage: ${currentTeam.name} (${currentTeam.code})`
-      );
-    } else {
-      logs.push(`💾 Nessun team corrente nel localStorage`);
+    // Debug localStorage (async)
+    try {
+      const currentTeam = await TeamCodeService.getCurrentTeam();
+      if (currentTeam) {
+        logs.push(
+          `💾 Team corrente nel localStorage: ${currentTeam.name} (${currentTeam.code})`
+        );
+      } else {
+        logs.push(`💾 Nessun team corrente nel localStorage`);
+      }
+    } catch (error) {
+      logs.push(`❌ Errore caricamento team corrente: ${error}`);
     }
 
     const allTeams = TeamCodeService.getAllTeams();
@@ -57,23 +63,49 @@ const DebugTeamLoading: React.FC = () => {
     });
 
     setDebugInfo(logs);
+  };
+
+  useEffect(() => {
+    runDebug();
   }, []);
 
-  // Solo mostra il debug in development o se c'è ?debug nell'URL
-  const showDebug =
-    process.env.NODE_ENV === 'development' ||
-    new URLSearchParams(window.location.search).has('debug');
-
-  if (!showDebug) return null;
-
   return (
-    <div className='fixed bottom-4 right-4 bg-black bg-opacity-80 text-white text-xs p-4 rounded-lg max-w-md max-h-60 overflow-y-auto z-50'>
-      <div className='font-bold mb-2'>🐛 Debug Team Loading</div>
-      {debugInfo.map((log, index) => (
-        <div key={index} className='mb-1 font-mono'>
-          {log}
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="text-lg font-bold text-gray-900">
+            🔍 Debug Team Loading
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-xl"
+          >
+            ×
+          </button>
         </div>
-      ))}
+        
+        <div className="p-4 overflow-y-auto max-h-96">
+          <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm">
+            {debugInfo.map((line, index) => (
+              <div key={index} className="whitespace-pre-wrap">
+                {line}
+              </div>
+            ))}
+            {debugInfo.length === 0 && (
+              <div>⏳ Caricamento debug info...</div>
+            )}
+          </div>
+        </div>
+        
+        <div className="p-4 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+          >
+            Chiudi Debug
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

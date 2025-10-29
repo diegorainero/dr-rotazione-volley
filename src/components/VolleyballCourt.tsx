@@ -86,45 +86,58 @@ const VolleyballCourt: React.FC = () => {
     );
   }, [isUnder13Mode]);
 
-  // Carica i dati salvati all'avvio
-  useEffect(() => {
-    loadSavedPositions();
-    loadFormations();
+  // Carica team all'avvio con priorità cloud-aware
+  const loadInitialTeam = async () => {
+    console.log('🔍 Inizializzazione VolleyballCourt - cerco team...');
 
-    // 1. PRIMO: Controlla se c'è un team nell'URL (priorità massima)
+    // 1. PRIMO: Controlla se ci sono dati team embeddati nell'URL
     const urlTeamData = TeamCodeService.getTeamDataFromUrl();
     if (urlTeamData) {
-      console.log("🔗 Team trovato nell'URL:", urlTeamData);
+      console.log("🎯 Dati team completi trovati nell'URL:", urlTeamData);
       setCurrentTeam(urlTeamData);
-      // Pulisci URL per evitare loop
-      window.history.replaceState({}, '', window.location.pathname);
       return;
     }
 
-    // 2. SECONDO: Controlla codice team semplice nell'URL
+    // 2. SECONDO: Controlla se c'è un codice team nell'URL (per compatibilità)
     const urlTeamCode = TeamCodeService.getTeamCodeFromUrl();
     if (urlTeamCode) {
       console.log("🔗 Codice team trovato nell'URL:", urlTeamCode);
-      const existingTeam = TeamCodeService.loadTeam(urlTeamCode);
-      if (existingTeam) {
-        console.log('✅ Team caricato da codice URL');
-        setCurrentTeam(existingTeam);
-        return;
-      } else {
-        console.log('❌ Team con codice non trovato localmente');
+      try {
+        const existingTeam = await TeamCodeService.loadTeam(urlTeamCode);
+        if (existingTeam) {
+          console.log('✅ Team caricato da codice URL');
+          setCurrentTeam(existingTeam);
+          return;
+        } else {
+          console.log('❌ Team con codice non trovato localmente');
+        }
+      } catch (error) {
+        console.log('❌ Errore caricamento team da URL:', error);
       }
     }
 
     // 3. TERZO: Carica team corrente se presente nel localStorage
-    const team = TeamCodeService.getCurrentTeam();
-    if (team) {
-      console.log('📱 Team caricato dal localStorage:', team);
-      setCurrentTeam(team);
-    } else {
-      // Se non c'è team corrente, mostra il manager
-      console.log('👥 Nessun team trovato, mostra manager');
+    try {
+      const team = await TeamCodeService.getCurrentTeam();
+      if (team) {
+        console.log('📱 Team caricato dal localStorage:', team);
+        setCurrentTeam(team);
+      } else {
+        // Se non c'è team corrente, mostra il manager
+        console.log('👥 Nessun team trovato, mostra manager');
+        setShowTeamManager(true);
+      }
+    } catch (error) {
+      console.log('❌ Errore caricamento team corrente:', error);
       setShowTeamManager(true);
     }
+  };
+
+  // Carica i dati salvati all'avvio
+  useEffect(() => {
+    loadSavedPositions();
+    loadFormations();
+    loadInitialTeam();
   }, []);
 
   const loadFormations = async () => {
@@ -1620,7 +1633,9 @@ const VolleyballCourt: React.FC = () => {
         )}
 
         {/* Debug Component per troubleshooting */}
-        <DebugTeamLoading />
+        {false && (
+          <DebugTeamLoading onClose={() => console.log('Debug closed')} />
+        )}
       </div>
     </div>
   );
