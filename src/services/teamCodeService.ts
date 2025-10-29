@@ -3,13 +3,23 @@
  * Ogni squadra ha un codice univoco per accedere alle proprie formazioni
  */
 
+import { CloudService } from './cloudService';
+
+export interface PlayerData {
+  role: string;
+  x: number;
+  y: number;
+  color?: string;
+}
+
 export interface TeamData {
   code: string;
   name: string;
+  players: PlayerData[];
   createdAt: string;
   lastUsed: string;
-  formations: number; // conteggio formazioni
-  receptions: number; // conteggio ricezioni
+  formations?: number;
+  receptions?: number;
 }
 
 export class TeamCodeService {
@@ -35,16 +45,18 @@ export class TeamCodeService {
    */
   static createTeam(teamName: string): TeamData {
     const code = this.generateTeamCode(teamName);
+    const now = new Date().toISOString();
     const teamData: TeamData = {
       code,
-      name: teamName.trim(),
-      createdAt: new Date().toISOString(),
-      lastUsed: new Date().toISOString(),
+      name: teamName,
+      players: [],
+      createdAt: now,
+      lastUsed: now,
       formations: 0,
       receptions: 0,
     };
 
-    // Salva i dati della squadra
+    // Salva i dati della squadra localmente
     localStorage.setItem(
       `${this.STORAGE_PREFIX}${code}`,
       JSON.stringify(teamData)
@@ -56,28 +68,62 @@ export class TeamCodeService {
     // Imposta come squadra corrente
     this.setCurrentTeam(code);
 
+    // Prova a salvare nel cloud se abilitato
+    CloudService.saveTeamToCloud(teamData).catch((err) =>
+      console.log('ℹ️ Cloud sync non disponibile:', err.message)
+    );
+
     console.log(`✅ Squadra "${teamName}" creata con codice: ${code}`);
     return teamData;
   }
 
   /**
-   * Carica i dati di una squadra tramite codice
+   * Carica i dati di una squadra tramite codice (con sync cloud opzionale)
    */
-  static loadTeam(code: string): TeamData | null {
-    const data = localStorage.getItem(`${this.STORAGE_PREFIX}${code}`);
-    if (!data) return null;
+  static async loadTeam(code: string): Promise<TeamData | null> {
+    // Prima prova a caricare dal locale
+    const localData = localStorage.getItem(`${this.STORAGE_PREFIX}${code}`);
+    let teamData: TeamData | null = null;
 
-    try {
-      const teamData: TeamData = JSON.parse(data);
-      // Aggiorna ultimo utilizzo
-      teamData.lastUsed = new Date().toISOString();
-      this.saveTeam(teamData);
-      this.setCurrentTeam(code);
-      return teamData;
-    } catch (error) {
-      console.error('❌ Errore nel caricamento squadra:', error);
-      return null;
+    if (localData) {
+      try {
+        teamData = JSON.parse(localData);
+      } catch (error) {
+        console.error('❌ Errore parsing dati locali:', error);
+      }
     }
+
+    // Prova a sincronizzare con il cloud
+    try {
+      const cloudTeam = await CloudService.loadTeamFromCloud(code);
+      if (cloudTeam) {
+        // Se abbiamo sia locale che cloud, usa il più recente
+        if (teamData) {
+          const localTime = new Date(teamData.lastUsed).getTime();
+          const cloudTime = new Date(cloudTeam.lastUsed).getTime();
+          teamData = cloudTime > localTime ? cloudTeam : teamData;
+        } else {
+          teamData = cloudTeam;
+        }
+      } else {
+        // Se non c'è nel cloud, prova a cercare team pubblici
+        const publicTeam = await CloudService.findPublicTeam(code);
+        if (publicTeam) {
+          teamData = publicTeam;
+        }
+      }
+    } catch (error) {
+      console.log('ℹ️ Cloud sync non disponibile, uso dati locali');
+    }
+
+    if (!teamData) return null;
+
+    // Aggiorna ultimo utilizzo e salva
+    teamData.lastUsed = new Date().toISOString();
+    this.saveTeam(teamData);
+    this.setCurrentTeam(code);
+
+    return teamData;
   }
 
   /**
@@ -92,11 +138,12 @@ export class TeamCodeService {
   }
 
   /**
-   * Ottiene la squadra attualmente attiva
+   * Ottiene la squadra corrente
    */
-  static getCurrentTeam(): TeamData | null {
+  static async getCurrentTeam(): Promise<TeamData | null> {
     const currentCode = localStorage.getItem(this.CURRENT_TEAM_KEY);
     if (!currentCode) return null;
+
     return this.loadTeam(currentCode);
   }
 
@@ -231,12 +278,12 @@ export class TeamCodeService {
   /**
    * Aggiorna conteggi formazioni/ricezioni per una squadra
    */
-  static updateTeamStats(
+  static async updateTeamStats(
     code: string,
     formations?: number,
     receptions?: number
-  ): void {
-    const team = this.loadTeam(code);
+  ): Promise<void> {
+    const team = await this.loadTeam(code);
     if (!team) return;
 
     if (formations !== undefined) team.formations = formations;

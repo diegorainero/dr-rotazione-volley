@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TeamCodeService, TeamData } from '../services/teamCodeService';
 import ShareTeam from './ShareTeam';
+import CloudSync from './CloudSync';
 
 interface TeamManagerProps {
   onTeamSelected: (team: TeamData | null) => void;
@@ -38,20 +39,25 @@ const TeamManager: React.FC<TeamManagerProps> = ({
     onTeamSelected(newTeam);
   };
 
-  const handleJoinTeam = (code?: string) => {
+  const handleJoinTeam = async (code?: string) => {
     const codeToUse = code || joinCode.trim().toUpperCase();
     if (!codeToUse) return;
 
-    const team = TeamCodeService.loadTeam(codeToUse);
-    if (team) {
-      setJoinCode('');
-      setShowJoinForm(false);
-      loadTeams();
-      onTeamSelected(team);
-    } else {
-      alert(
-        `❌ Squadra con codice "${codeToUse}" non trovata.\n\n💡 Suggerimento: Usa il link di condivisione completo o il QR code per unirsi automaticamente alla squadra!`
-      );
+    try {
+      const team = await TeamCodeService.loadTeam(codeToUse);
+      if (team) {
+        setJoinCode('');
+        setShowJoinForm(false);
+        loadTeams();
+        onTeamSelected(team);
+      } else {
+        alert(
+          `❌ Squadra con codice "${codeToUse}" non trovata.\n\n💡 Suggerimento: Usa il link di condivisione completo o il QR code per unirsi automaticamente alla squadra!`
+        );
+      }
+    } catch (error) {
+      console.error('❌ Errore caricamento squadra:', error);
+      alert('❌ Errore nel caricamento della squadra. Riprova.');
     }
   };
 
@@ -119,6 +125,16 @@ const TeamManager: React.FC<TeamManagerProps> = ({
               </button>
             )}
           </div>
+
+          {/* Cloud Sync */}
+          <CloudSync
+            onSyncStatusChange={(status) => {
+              if (status.isEnabled) {
+                // Ricarica le squadre se il sync viene attivato
+                setTeams(TeamCodeService.getAllTeams());
+              }
+            }}
+          />
 
           {/* Squadra Attuale */}
           {currentTeam && (
