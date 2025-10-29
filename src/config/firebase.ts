@@ -5,12 +5,13 @@ import { getAuth, signInAnonymously } from 'firebase/auth';
 
 // Configurazione Firebase (sostituisci con i tuoi dati quando crei il progetto)
 const firebaseConfig = {
-  apiKey: 'AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-  authDomain: 'volley-rotazioni.firebaseapp.com',
-  projectId: 'volley-rotazioni',
-  storageBucket: 'volley-rotazioni.appspot.com',
-  messagingSenderId: '123456789012',
-  appId: '1:123456789012:web:abcdefghijklmnop',
+  apiKey: 'AIzaSyDjr8wt1HSozTxUN8HVTTAqyPfn-8a6Axo',
+  authDomain: 'dr-rotazioni-volley.firebaseapp.com',
+  projectId: 'dr-rotazioni-volley',
+  storageBucket: 'dr-rotazioni-volley.firebasestorage.app',
+  messagingSenderId: '297241495629',
+  appId: '1:297241495629:web:db135e474dca153d443404',
+  measurementId: 'G-455701GZZ0',
 };
 
 // Inizializza Firebase
