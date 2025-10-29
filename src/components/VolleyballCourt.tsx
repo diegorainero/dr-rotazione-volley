@@ -10,6 +10,8 @@ import {
   resetDatabase,
 } from '../db/database';
 import { useResponsiveCanvas, useIsMobile } from '../hooks/useResponsiveCanvas';
+import TeamManager from './TeamManager';
+import { TeamCodeService, TeamData } from '../services/teamCodeService';
 
 interface PlayerData {
   id: number;
@@ -71,6 +73,10 @@ const VolleyballCourt: React.FC = () => {
   });
   const isMobile = useIsMobile();
 
+  // Stati per gestione squadre
+  const [currentTeam, setCurrentTeam] = useState<TeamData | null>(null);
+  const [showTeamManager, setShowTeamManager] = useState(false);
+
   // Salva la modalità nel localStorage quando cambia
   useEffect(() => {
     localStorage.setItem(
@@ -83,6 +89,15 @@ const VolleyballCourt: React.FC = () => {
   useEffect(() => {
     loadSavedPositions();
     loadFormations();
+    
+    // Carica team corrente se presente
+    const team = TeamCodeService.getCurrentTeam();
+    if (team) {
+      setCurrentTeam(team);
+    } else {
+      // Se non c'è team corrente, mostra il manager
+      setShowTeamManager(true);
+    }
   }, []);
 
   const loadFormations = async () => {
@@ -488,6 +503,19 @@ const VolleyballCourt: React.FC = () => {
     setTimeout(() => setFeedback(''), 2000);
   };
 
+  // Gestore selezione team
+  const handleTeamSelected = (team: TeamData | null) => {
+    setCurrentTeam(team);
+    setShowTeamManager(false);
+    
+    if (team) {
+      console.log(`✅ Squadra selezionata: ${team.name} (${team.code})`);
+      // Ricarica dati specifici del team se necessario
+      loadSavedPositions();
+      loadFormations();
+    }
+  };
+
   // Salva la posizione di ricezione corrente
   const saveReceivePositions = async () => {
     try {
@@ -835,9 +863,24 @@ const VolleyballCourt: React.FC = () => {
       {/* HEADER COMPATTO CON TUTTI I CONTROLLI - OTTIMIZZATO MOBILE */}
       <div className='bg-gray-800 text-white p-3 shadow-lg'>
         <div className='max-w-6xl mx-auto'>
-          <h1 className={`font-bold mb-3 text-center ${isMobile ? 'text-base' : 'text-lg'}`}>
-            🏐 Rotazioni Volley {isMobile && canvasSize.scale < 0.7 ? '(Mobile)' : ''}
-          </h1>
+          <div className="flex items-center justify-between mb-3">
+            <h1 className={`font-bold ${isMobile ? 'text-base' : 'text-lg'}`}>
+              🏐 Rotazioni Volley {isMobile && canvasSize.scale < 0.7 ? '(Mobile)' : ''}
+            </h1>
+            <div className="flex items-center gap-2">
+              <TeamManager 
+                currentTeam={currentTeam}
+                onTeamSelected={handleTeamSelected}
+              />
+              <button
+                onClick={() => setShowTeamManager(true)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 text-xs rounded"
+                title="Gestisci squadre"
+              >
+                👥 Team
+              </button>
+            </div>
+          </div>
 
           {/* Riga 1: Gestione Formazioni e Modalità */}
           <div className={`flex gap-2 mb-2 flex-wrap justify-center ${isMobile ? 'gap-1' : ''}`}>
@@ -1499,6 +1542,14 @@ const VolleyballCourt: React.FC = () => {
               </ul>
             </div>
           </div>
+        )}
+
+        {/* Modal Team Manager */}
+        {showTeamManager && (
+          <TeamManager 
+            currentTeam={currentTeam}
+            onTeamSelected={handleTeamSelected}
+          />
         )}
       </div>
     </div>
