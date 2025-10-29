@@ -69,7 +69,7 @@ const VolleyballCourt: React.FC = () => {
     baseHeight: 450,
     maxWidth: 1200,
     minScale: 0.3,
-    maxScale: 1.2
+    maxScale: 1.2,
   });
   const isMobile = useIsMobile();
 
@@ -89,7 +89,7 @@ const VolleyballCourt: React.FC = () => {
   useEffect(() => {
     loadSavedPositions();
     loadFormations();
-    
+
     // Carica team corrente se presente
     const team = TeamCodeService.getCurrentTeam();
     if (team) {
@@ -507,7 +507,7 @@ const VolleyballCourt: React.FC = () => {
   const handleTeamSelected = (team: TeamData | null) => {
     setCurrentTeam(team);
     setShowTeamManager(false);
-    
+
     if (team) {
       console.log(`✅ Squadra selezionata: ${team.name} (${team.code})`);
       // Ricarica dati specifici del team se necessario
@@ -863,19 +863,20 @@ const VolleyballCourt: React.FC = () => {
       {/* HEADER COMPATTO CON TUTTI I CONTROLLI - OTTIMIZZATO MOBILE */}
       <div className='bg-gray-800 text-white p-3 shadow-lg'>
         <div className='max-w-6xl mx-auto'>
-          <div className="flex items-center justify-between mb-3">
+          <div className='flex items-center justify-between mb-3'>
             <h1 className={`font-bold ${isMobile ? 'text-base' : 'text-lg'}`}>
-              🏐 Rotazioni Volley {isMobile && canvasSize.scale < 0.7 ? '(Mobile)' : ''}
+              🏐 Rotazioni Volley{' '}
+              {isMobile && canvasSize.scale < 0.7 ? '(Mobile)' : ''}
             </h1>
-            <div className="flex items-center gap-2">
-              <TeamManager 
+            <div className='flex items-center gap-2'>
+              <TeamManager
                 currentTeam={currentTeam}
                 onTeamSelected={handleTeamSelected}
               />
               <button
                 onClick={() => setShowTeamManager(true)}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 text-xs rounded"
-                title="Gestisci squadre"
+                className='bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 text-xs rounded'
+                title='Gestisci squadre'
               >
                 👥 Team
               </button>
@@ -883,11 +884,17 @@ const VolleyballCourt: React.FC = () => {
           </div>
 
           {/* Riga 1: Gestione Formazioni e Modalità */}
-          <div className={`flex gap-2 mb-2 flex-wrap justify-center ${isMobile ? 'gap-1' : ''}`}>
+          <div
+            className={`flex gap-2 mb-2 flex-wrap justify-center ${
+              isMobile ? 'gap-1' : ''
+            }`}
+          >
             <button
               onClick={saveCurrentFormation}
               disabled={loading}
-              className={`bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors ${isMobile ? 'min-h-[40px] text-xs' : ''}`}
+              className={`bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors ${
+                isMobile ? 'min-h-[40px] text-xs' : ''
+              }`}
               title='Salva la formazione corrente (richiede solo squadra e descrizione)'
             >
               💾 {isMobile ? 'Salva' : 'Salva Formazione'}
@@ -895,7 +902,9 @@ const VolleyballCourt: React.FC = () => {
             <button
               onClick={() => setShowLoadFormations(!showLoadFormations)}
               disabled={loading}
-              className={`bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors ${isMobile ? 'min-h-[40px] text-xs' : ''}`}
+              className={`bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors ${
+                isMobile ? 'min-h-[40px] text-xs' : ''
+              }`}
             >
               📂 {isMobile ? 'Carica' : 'Carica Formazione'}
             </button>
@@ -924,7 +933,9 @@ const VolleyballCourt: React.FC = () => {
                   `✅ Modalità ${modeName} salvata per le prossime sessioni`
                 );
               }}
-              className={`px-3 py-1 text-xs rounded transition-all duration-200 ${isMobile ? 'min-h-[40px]' : ''} ${
+              className={`px-3 py-1 text-xs rounded transition-all duration-200 ${
+                isMobile ? 'min-h-[40px]' : ''
+              } ${
                 isUnder13Mode
                   ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-md'
                   : 'bg-gray-600 hover:bg-gray-500 text-white shadow-md'
@@ -1065,7 +1076,11 @@ const VolleyballCourt: React.FC = () => {
               {/* Pulsanti Libero ottimizzati per mobile */}
               <button
                 onClick={toggleLiberoHome}
-                className={`absolute ${isMobile ? 'left-1 top-2' : 'left-2 top-1/2 transform -translate-y-1/2'} px-2 py-1 text-xs rounded-lg font-medium transition-all z-10 ${
+                className={`absolute ${
+                  isMobile
+                    ? 'left-1 top-2'
+                    : 'left-2 top-1/2 transform -translate-y-1/2'
+                } px-2 py-1 text-xs rounded-lg font-medium transition-all z-10 ${
                   liberoModeHome
                     ? 'bg-yellow-500 text-white shadow-lg hover:bg-yellow-600'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -1077,7 +1092,11 @@ const VolleyballCourt: React.FC = () => {
 
               <button
                 onClick={toggleLiberoAway}
-                className={`absolute ${isMobile ? 'right-1 top-2' : 'right-2 top-1/2 transform -translate-y-1/2'} px-2 py-1 text-xs rounded-lg font-medium transition-all z-10 ${
+                className={`absolute ${
+                  isMobile
+                    ? 'right-1 top-2'
+                    : 'right-2 top-1/2 transform -translate-y-1/2'
+                } px-2 py-1 text-xs rounded-lg font-medium transition-all z-10 ${
                   liberoModeAway
                     ? 'bg-yellow-500 text-white shadow-lg hover:bg-yellow-600'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -1115,38 +1134,55 @@ const VolleyballCourt: React.FC = () => {
                     strokeWidth={2 * canvasSize.scale}
                   />
                   <Line
-                    points={[450 * canvasSize.scale, 0, 450 * canvasSize.scale, 450 * canvasSize.scale]}
+                    points={[
+                      450 * canvasSize.scale,
+                      0,
+                      450 * canvasSize.scale,
+                      450 * canvasSize.scale,
+                    ]}
                     stroke='black'
                     strokeWidth={3 * canvasSize.scale}
                   />
-                  <Line 
-                    points={[300 * canvasSize.scale, 0, 300 * canvasSize.scale, 450 * canvasSize.scale]} 
-                    stroke='#888' 
-                    dash={[5 * canvasSize.scale, 5 * canvasSize.scale]} 
+                  <Line
+                    points={[
+                      300 * canvasSize.scale,
+                      0,
+                      300 * canvasSize.scale,
+                      450 * canvasSize.scale,
+                    ]}
+                    stroke='#888'
+                    dash={[5 * canvasSize.scale, 5 * canvasSize.scale]}
                   />
-                  <Line 
-                    points={[600 * canvasSize.scale, 0, 600 * canvasSize.scale, 450 * canvasSize.scale]} 
-                    stroke='#888' 
-                    dash={[5 * canvasSize.scale, 5 * canvasSize.scale]} 
+                  <Line
+                    points={[
+                      600 * canvasSize.scale,
+                      0,
+                      600 * canvasSize.scale,
+                      450 * canvasSize.scale,
+                    ]}
+                    stroke='#888'
+                    dash={[5 * canvasSize.scale, 5 * canvasSize.scale]}
                   />
 
-                {players.map((p) => (
-                  <Player
-                    key={p.id}
-                    x={p.x * canvasSize.scale}
-                    y={p.y * canvasSize.scale}
-                    role={convertRoleToDisplay(p.role, p.id)}
-                    color={falli.includes(p.id) ? 'red' : p.color}
-                    scale={canvasSize.scale}
-                    draggable={p.team === 'home'}
-                    onDragEnd={(pos) => handleDrag(p.id, {
-                      x: pos.x / canvasSize.scale,
-                      y: pos.y / canvasSize.scale
-                    })}
-                  />
-                ))}
-              </Layer>
-            </Stage>
+                  {players.map((p) => (
+                    <Player
+                      key={p.id}
+                      x={p.x * canvasSize.scale}
+                      y={p.y * canvasSize.scale}
+                      role={convertRoleToDisplay(p.role, p.id)}
+                      color={falli.includes(p.id) ? 'red' : p.color}
+                      scale={canvasSize.scale}
+                      draggable={p.team === 'home'}
+                      onDragEnd={(pos) =>
+                        handleDrag(p.id, {
+                          x: pos.x / canvasSize.scale,
+                          y: pos.y / canvasSize.scale,
+                        })
+                      }
+                    />
+                  ))}
+                </Layer>
+              </Stage>
             </div>
           </div>
         </div>
@@ -1159,7 +1195,11 @@ const VolleyballCourt: React.FC = () => {
         )}
 
         {/* PULSANTI DI ROTAZIONE - OTTIMIZZATI PER MOBILE */}
-        <div className={`flex gap-2 flex-wrap justify-center ${isMobile ? 'gap-1' : 'gap-4'}`}>
+        <div
+          className={`flex gap-2 flex-wrap justify-center ${
+            isMobile ? 'gap-1' : 'gap-4'
+          }`}
+        >
           <button
             onClick={() => rotateTeam('home')}
             className={`bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-md transition-all ${
@@ -1546,7 +1586,7 @@ const VolleyballCourt: React.FC = () => {
 
         {/* Modal Team Manager */}
         {showTeamManager && (
-          <TeamManager 
+          <TeamManager
             currentTeam={currentTeam}
             onTeamSelected={handleTeamSelected}
           />
