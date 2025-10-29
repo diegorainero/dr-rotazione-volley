@@ -22,7 +22,10 @@ export class TeamCodeService {
    */
   static generateTeamCode(teamName: string): string {
     const timestamp = Date.now().toString();
-    const nameHash = btoa(teamName.toLowerCase().replace(/\s+/g, '')).slice(0, 4);
+    const nameHash = btoa(teamName.toLowerCase().replace(/\s+/g, '')).slice(
+      0,
+      4
+    );
     const timeHash = btoa(timestamp).slice(-4);
     return (nameHash + timeHash).toUpperCase().replace(/[^A-Z0-9]/g, '');
   }
@@ -38,12 +41,12 @@ export class TeamCodeService {
       createdAt: new Date().toISOString(),
       lastUsed: new Date().toISOString(),
       formations: 0,
-      receptions: 0
+      receptions: 0,
     };
 
     // Salva i dati della squadra
     localStorage.setItem(
-      `${this.STORAGE_PREFIX}${code}`, 
+      `${this.STORAGE_PREFIX}${code}`,
       JSON.stringify(teamData)
     );
 
@@ -82,7 +85,7 @@ export class TeamCodeService {
    */
   static saveTeam(teamData: TeamData): void {
     localStorage.setItem(
-      `${this.STORAGE_PREFIX}${teamData.code}`, 
+      `${this.STORAGE_PREFIX}${teamData.code}`,
       JSON.stringify(teamData)
     );
     this.addToTeamsList(teamData);
@@ -123,17 +126,19 @@ export class TeamCodeService {
    */
   private static addToTeamsList(teamData: TeamData): void {
     const teams = this.getAllTeams();
-    const existingIndex = teams.findIndex(t => t.code === teamData.code);
-    
+    const existingIndex = teams.findIndex((t) => t.code === teamData.code);
+
     if (existingIndex >= 0) {
       teams[existingIndex] = teamData;
     } else {
       teams.push(teamData);
     }
-    
+
     // Ordina per ultimo utilizzo (più recenti prima)
-    teams.sort((a, b) => new Date(b.lastUsed).getTime() - new Date(a.lastUsed).getTime());
-    
+    teams.sort(
+      (a, b) => new Date(b.lastUsed).getTime() - new Date(a.lastUsed).getTime()
+    );
+
     localStorage.setItem(this.TEAMS_LIST_KEY, JSON.stringify(teams));
   }
 
@@ -144,34 +149,46 @@ export class TeamCodeService {
     try {
       // Rimuovi dati squadra
       localStorage.removeItem(`${this.STORAGE_PREFIX}${code}`);
-      
+
       // Rimuovi dalla lista
-      const teams = this.getAllTeams().filter(t => t.code !== code);
+      const teams = this.getAllTeams().filter((t) => t.code !== code);
       localStorage.setItem(this.TEAMS_LIST_KEY, JSON.stringify(teams));
-      
+
       // Se era la squadra corrente, resetta
       if (localStorage.getItem(this.CURRENT_TEAM_KEY) === code) {
         localStorage.removeItem(this.CURRENT_TEAM_KEY);
       }
-      
+
       console.log(`✅ Squadra ${code} eliminata`);
       return true;
     } catch (error) {
-      console.error('❌ Errore nell\'eliminazione squadra:', error);
+      console.error("❌ Errore nell'eliminazione squadra:", error);
       return false;
     }
   }
 
   /**
-   * Genera URL di condivisione per una squadra
+   * Genera URL di condivisione per una squadra (con dati embedded)
    */
   static generateShareUrl(code: string): string {
+    const teamData = this.loadTeam(code);
+    if (!teamData) return window.location.origin + window.location.pathname;
+
+    // Crea oggetto con dati essenziali per la condivisione
+    const shareData = {
+      team: teamData,
+      timestamp: Date.now(),
+    };
+
+    // Comprimi e codifica i dati
+    const compressed = btoa(JSON.stringify(shareData));
     const baseUrl = window.location.origin + window.location.pathname;
-    return `${baseUrl}?team=${code}`;
+
+    return `${baseUrl}?teamdata=${compressed}`;
   }
 
   /**
-   * Estrae codice squadra dall'URL se presente
+   * Estrae codice squadra dall'URL se presente (backward compatibility)
    */
   static getTeamCodeFromUrl(): string | null {
     const params = new URLSearchParams(window.location.search);
@@ -179,15 +196,52 @@ export class TeamCodeService {
   }
 
   /**
+   * Estrae e importa dati squadra dall'URL se presenti
+   */
+  static getTeamDataFromUrl(): TeamData | null {
+    const params = new URLSearchParams(window.location.search);
+    const teamDataParam = params.get('teamdata');
+
+    if (!teamDataParam) return null;
+
+    try {
+      // Decodifica i dati compressi
+      const decoded = atob(teamDataParam);
+      const shareData = JSON.parse(decoded);
+
+      if (!shareData.team || !shareData.team.code) {
+        throw new Error('Dati squadra non validi');
+      }
+
+      const teamData: TeamData = shareData.team;
+
+      // Salva la squadra automaticamente quando viene importata da URL
+      this.saveTeam(teamData);
+
+      console.log(
+        `✅ Squadra importata da URL: ${teamData.name} (${teamData.code})`
+      );
+      return teamData;
+    } catch (error) {
+      console.error('❌ Errore nel parsing dati squadra da URL:', error);
+      return null;
+    }
+  }
+
+  /**
    * Aggiorna conteggi formazioni/ricezioni per una squadra
    */
-  static updateTeamStats(code: string, formations?: number, receptions?: number): void {
+  static updateTeamStats(
+    code: string,
+    formations?: number,
+    receptions?: number
+  ): void {
     const team = this.loadTeam(code);
     if (!team) return;
 
     if (formations !== undefined) team.formations = formations;
     if (receptions !== undefined) team.receptions = receptions;
-    
+
     this.saveTeam(team);
   }
 
@@ -204,7 +258,7 @@ export class TeamCodeService {
       formations: [], // TODO: integrare con rotationsService
       receptions: [], // TODO: integrare con receivePositionsService
       exportedAt: new Date().toISOString(),
-      version: '1.0'
+      version: '1.0',
     };
 
     return JSON.stringify(exportData, null, 2);
@@ -222,13 +276,13 @@ export class TeamCodeService {
 
       // Importa squadra
       this.saveTeam(data.team);
-      
+
       // TODO: Importa formazioni e ricezioni
-      
+
       console.log(`✅ Backup importato per squadra ${data.team.name}`);
       return true;
     } catch (error) {
-      console.error('❌ Errore nell\'import backup:', error);
+      console.error("❌ Errore nell'import backup:", error);
       return false;
     }
   }
