@@ -20,8 +20,17 @@
    - Output Directory: `build`
 6. **Deploy**: Clicca "Deploy"
 
+⚠️ **IMPORTANTE**: Rimuovi `"homepage"` dal package.json per Vercel!
+
 ### URL Finale
 - Avrai un URL tipo: `https://dr-rotazioni-volley-xyz.vercel.app`
+
+### ✅ Risoluzione Errori MIME
+Se vedi errori tipo:
+```
+Il foglio di stile non è stato caricato in quanto il suo tipo MIME, "text/html", non corrisponde a "text/css"
+```
+**Soluzione**: Rimuovi `"homepage"` dal package.json e rifai il deploy
 
 ---
 
@@ -76,6 +85,8 @@ npm run deploy
 
 4. **Abilita Pages** su GitHub:
    - Settings → Pages → Source: "gh-pages branch"
+
+⚠️ **NOTA**: GitHub Pages richiede la proprietà `homepage` nel package.json
 
 ---
 
@@ -139,6 +150,44 @@ surge
 - Vercel: Domini custom gratuiti 
 - Netlify: Domini custom gratuiti
 - Altri: Circa €10/anno per dominio .com
+
+## ⚠️ CONFIGURAZIONE CRITICA
+
+### 🔧 Package.json per diversi Provider
+
+**Per VERCEL/NETLIFY/SURGE:**
+```json
+{
+  "name": "dr-rotazioni-volley",
+  "version": "0.1.0", 
+  "private": true,
+  // ❌ NON includere "homepage"
+  "scripts": {
+    "build": "react-scripts build"
+  }
+}
+```
+
+**Per GITHUB PAGES:**
+```json
+{
+  "name": "dr-rotazioni-volley",
+  "version": "0.1.0",
+  "private": true,
+  "homepage": "https://diegorainero.github.io/dr-rotazione-volley", // ✅ NECESSARIO
+  "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
+  }
+}
+```
+
+### 🚨 Errori Comuni
+- **MIME type "text/html"**: causato da `homepage` nel package.json su Vercel
+- **404 su assets**: percorsi base non configurati correttamente
+- **Routing issues**: SPA routing non configurato sul provider
+
+---
 
 ## 🛠️ Preparazione Pre-Deploy
 
