@@ -9,6 +9,7 @@ import {
   db,
   resetDatabase,
 } from '../db/database';
+import { useResponsiveCanvas, useIsMobile } from '../hooks/useResponsiveCanvas';
 
 interface PlayerData {
   id: number;
@@ -59,6 +60,16 @@ const VolleyballCourt: React.FC = () => {
   // Stati per il Libero
   const [liberoModeHome, setLiberoModeHome] = useState(false);
   const [liberoModeAway, setLiberoModeAway] = useState(false);
+
+  // Hook per responsive canvas
+  const canvasSize = useResponsiveCanvas({
+    baseWidth: 900,
+    baseHeight: 450,
+    maxWidth: 1200,
+    minScale: 0.3,
+    maxScale: 1.2
+  });
+  const isMobile = useIsMobile();
 
   // Salva la modalità nel localStorage quando cambia
   useEffect(() => {
@@ -821,29 +832,29 @@ const VolleyballCourt: React.FC = () => {
 
   return (
     <div className='flex flex-col h-screen'>
-      {/* HEADER COMPATTO CON TUTTI I CONTROLLI */}
+      {/* HEADER COMPATTO CON TUTTI I CONTROLLI - OTTIMIZZATO MOBILE */}
       <div className='bg-gray-800 text-white p-3 shadow-lg'>
         <div className='max-w-6xl mx-auto'>
-          <h1 className='text-lg font-bold mb-3 text-center'>
-            🏐 Rotazioni Volley
+          <h1 className={`font-bold mb-3 text-center ${isMobile ? 'text-base' : 'text-lg'}`}>
+            🏐 Rotazioni Volley {isMobile && canvasSize.scale < 0.7 ? '(Mobile)' : ''}
           </h1>
 
           {/* Riga 1: Gestione Formazioni e Modalità */}
-          <div className='flex gap-2 mb-2 flex-wrap justify-center'>
+          <div className={`flex gap-2 mb-2 flex-wrap justify-center ${isMobile ? 'gap-1' : ''}`}>
             <button
               onClick={saveCurrentFormation}
               disabled={loading}
-              className='bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors'
+              className={`bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors ${isMobile ? 'min-h-[40px] text-xs' : ''}`}
               title='Salva la formazione corrente (richiede solo squadra e descrizione)'
             >
-              💾 Salva Formazione
+              💾 {isMobile ? 'Salva' : 'Salva Formazione'}
             </button>
             <button
               onClick={() => setShowLoadFormations(!showLoadFormations)}
               disabled={loading}
-              className='bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors'
+              className={`bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors ${isMobile ? 'min-h-[40px] text-xs' : ''}`}
             >
-              📂 Carica Formazione
+              📂 {isMobile ? 'Carica' : 'Carica Formazione'}
             </button>
             <button
               onClick={() => setShowFormations(!showFormations)}
@@ -870,7 +881,7 @@ const VolleyballCourt: React.FC = () => {
                   `✅ Modalità ${modeName} salvata per le prossime sessioni`
                 );
               }}
-              className={`px-3 py-1 text-xs rounded transition-all duration-200 ${
+              className={`px-3 py-1 text-xs rounded transition-all duration-200 ${isMobile ? 'min-h-[40px]' : ''} ${
                 isUnder13Mode
                   ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-md'
                   : 'bg-gray-600 hover:bg-gray-500 text-white shadow-md'
@@ -881,9 +892,11 @@ const VolleyballCourt: React.FC = () => {
             >
               {isUnder13Mode ? '🟠 Under 13' : '🔵 Senior'}
             </button>
-            <span className='text-xs text-gray-300 flex items-center'>
-              {isUnder13Mode ? '(P, Z4, Z2)' : '(P, S1, C2, O, S2, C1, L)'}
-            </span>
+            {!isMobile && (
+              <span className='text-xs text-gray-300 flex items-center'>
+                {isUnder13Mode ? '(P, Z4, Z2)' : '(P, S1, C2, O, S2, C1, L)'}
+              </span>
+            )}
           </div>
 
           {/* Riga 2: Ricezione e Utilities */}
@@ -1006,78 +1019,92 @@ const VolleyballCourt: React.FC = () => {
           {/* Pulsanti Libero - Solo in modalità Senior */}
           {!isUnder13Mode && (
             <>
-              {/* Pulsante Libero Squadra Casa (sinistra) */}
+              {/* Pulsanti Libero ottimizzati per mobile */}
               <button
                 onClick={toggleLiberoHome}
-                className={`absolute left-2 top-1/2 transform -translate-y-1/2 px-3 py-2 text-sm rounded-lg font-medium transition-all z-10 ${
+                className={`absolute ${isMobile ? 'left-1 top-2' : 'left-2 top-1/2 transform -translate-y-1/2'} px-2 py-1 text-xs rounded-lg font-medium transition-all z-10 ${
                   liberoModeHome
                     ? 'bg-yellow-500 text-white shadow-lg hover:bg-yellow-600'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+                } ${isMobile ? 'min-h-[36px] text-xs' : 'text-sm'}`}
                 title='Attiva/Disattiva Libero per squadra casa (sostituisce C1/C2 in seconda linea)'
               >
-                🟡 L Casa
+                🟡 {isMobile ? 'L' : 'L Casa'}
               </button>
 
-              {/* Pulsante Libero Squadra Ospiti (destra) */}
               <button
                 onClick={toggleLiberoAway}
-                className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-2 text-sm rounded-lg font-medium transition-all z-10 ${
+                className={`absolute ${isMobile ? 'right-1 top-2' : 'right-2 top-1/2 transform -translate-y-1/2'} px-2 py-1 text-xs rounded-lg font-medium transition-all z-10 ${
                   liberoModeAway
                     ? 'bg-yellow-500 text-white shadow-lg hover:bg-yellow-600'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+                } ${isMobile ? 'min-h-[36px] text-xs' : 'text-sm'}`}
                 title='Attiva/Disattiva Libero per squadra ospiti (sostituisce C1/C2 in seconda linea)'
               >
-                🟡 L Ospiti
+                🟡 {isMobile ? 'L' : 'L Ospiti'}
               </button>
             </>
           )}
 
-          <div className='border-2 border-gray-500 bg-green-50 rounded-lg shadow-lg'>
-            {/* @ts-ignore */}
-            <Stage width={900} height={450}>
-              <Layer>
-                {/* Campo */}
-                <Rect
-                  x={0}
-                  y={0}
-                  width={450}
-                  height={450}
-                  stroke='black'
-                  fill='#eeeeee'
-                  strokeWidth={2}
-                />
-                <Rect
-                  x={450}
-                  y={0}
-                  width={450}
-                  height={450}
-                  fill='white'
-                  stroke='black'
-                  strokeWidth={2}
-                />
-                <Line
-                  points={[450, 0, 450, 450]}
-                  stroke='black'
-                  strokeWidth={3}
-                />
-                <Line points={[300, 0, 300, 450]} stroke='#888' dash={[5, 5]} />
-                <Line points={[600, 0, 600, 450]} stroke='#888' dash={[5, 5]} />
+          <div className='border-2 border-gray-500 bg-green-50 rounded-lg shadow-lg overflow-auto'>
+            {/* Container responsive per il canvas */}
+            <div className='flex justify-center items-center min-h-0'>
+              {/* @ts-ignore */}
+              <Stage width={canvasSize.width} height={canvasSize.height}>
+                <Layer>
+                  {/* Campo - dimensioni scalate automaticamente */}
+                  <Rect
+                    x={0}
+                    y={0}
+                    width={450 * canvasSize.scale}
+                    height={450 * canvasSize.scale}
+                    stroke='black'
+                    fill='#eeeeee'
+                    strokeWidth={2 * canvasSize.scale}
+                  />
+                  <Rect
+                    x={450 * canvasSize.scale}
+                    y={0}
+                    width={450 * canvasSize.scale}
+                    height={450 * canvasSize.scale}
+                    fill='white'
+                    stroke='black'
+                    strokeWidth={2 * canvasSize.scale}
+                  />
+                  <Line
+                    points={[450 * canvasSize.scale, 0, 450 * canvasSize.scale, 450 * canvasSize.scale]}
+                    stroke='black'
+                    strokeWidth={3 * canvasSize.scale}
+                  />
+                  <Line 
+                    points={[300 * canvasSize.scale, 0, 300 * canvasSize.scale, 450 * canvasSize.scale]} 
+                    stroke='#888' 
+                    dash={[5 * canvasSize.scale, 5 * canvasSize.scale]} 
+                  />
+                  <Line 
+                    points={[600 * canvasSize.scale, 0, 600 * canvasSize.scale, 450 * canvasSize.scale]} 
+                    stroke='#888' 
+                    dash={[5 * canvasSize.scale, 5 * canvasSize.scale]} 
+                  />
 
                 {players.map((p) => (
                   <Player
                     key={p.id}
-                    x={p.x}
-                    y={p.y}
+                    x={p.x * canvasSize.scale}
+                    y={p.y * canvasSize.scale}
                     role={convertRoleToDisplay(p.role, p.id)}
                     color={falli.includes(p.id) ? 'red' : p.color}
+                    scale={canvasSize.scale}
                     draggable={p.team === 'home'}
-                    onDragEnd={(pos) => handleDrag(p.id, pos)}
+                    onDragEnd={(pos) => handleDrag(p.id, {
+                      x: pos.x / canvasSize.scale,
+                      y: pos.y / canvasSize.scale
+                    })}
                   />
                 ))}
               </Layer>
             </Stage>
+            </div>
           </div>
         </div>
 
@@ -1088,25 +1115,31 @@ const VolleyballCourt: React.FC = () => {
           </div>
         )}
 
-        {/* PULSANTI DI ROTAZIONE - SEMPRE VISIBILI */}
-        <div className='flex gap-4 flex-wrap justify-center'>
+        {/* PULSANTI DI ROTAZIONE - OTTIMIZZATI PER MOBILE */}
+        <div className={`flex gap-2 flex-wrap justify-center ${isMobile ? 'gap-1' : 'gap-4'}`}>
           <button
             onClick={() => rotateTeam('home')}
-            className='bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 font-medium shadow-md transition-all'
+            className={`bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-md transition-all ${
+              isMobile ? 'px-4 py-3 text-sm min-h-[50px]' : 'px-6 py-3'
+            }`}
           >
-            🔄 Ruota Squadra Mia
+            🔄 {isMobile ? 'Mia' : 'Ruota Squadra Mia'}
           </button>
           <button
             onClick={() => rotateTeam('away')}
-            className='bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 font-medium shadow-md transition-all'
+            className={`bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium shadow-md transition-all ${
+              isMobile ? 'px-4 py-3 text-sm min-h-[50px]' : 'px-6 py-3'
+            }`}
           >
-            🔄 Ruota Avversari
+            🔄 {isMobile ? 'Avversari' : 'Ruota Avversari'}
           </button>
           <button
             onClick={rotateBothTeams}
-            className='bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 font-medium shadow-md transition-all'
+            className={`bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium shadow-md transition-all ${
+              isMobile ? 'px-4 py-3 text-sm min-h-[50px]' : 'px-6 py-3'
+            }`}
           >
-            🔄 Ruota Entrambe
+            🔄 {isMobile ? 'Entrambe' : 'Ruota Entrambe'}
           </button>
         </div>
 
