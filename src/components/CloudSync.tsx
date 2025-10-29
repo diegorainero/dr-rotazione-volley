@@ -126,8 +126,45 @@ const CloudSync: React.FC<CloudSyncProps> = ({ onSyncStatusChange }) => {
         )}
 
         {syncStatus.error && (
-          <div className='text-red-600 text-xs mt-2 p-2 bg-red-50 rounded'>
-            ⚠️ {syncStatus.error}
+          <div className='text-amber-600 text-xs mt-2 p-3 bg-amber-50 rounded-lg border border-amber-200'>
+            {syncStatus.error.includes('demo') ? (
+              <div>
+                <div className='font-medium mb-2'>
+                  🚀 Cloud Sync non configurato
+                </div>
+                <div className='text-amber-700'>
+                  Per abilitare il sync cloud:
+                </div>
+                <ol className='list-decimal list-inside mt-1 space-y-1 text-amber-700'>
+                  <li>
+                    Vai su{' '}
+                    <a
+                      href='https://console.firebase.google.com'
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='underline font-medium'
+                    >
+                      Firebase Console
+                    </a>
+                  </li>
+                  <li>Crea un nuovo progetto</li>
+                  <li>Abilita Firestore Database</li>
+                  <li>Abilita Authentication (Anonymous)</li>
+                  <li>
+                    Sostituisci la config in{' '}
+                    <code className='bg-amber-100 px-1 rounded'>
+                      firebase.ts
+                    </code>
+                  </li>
+                </ol>
+                <div className='mt-2 text-xs text-amber-600'>
+                  L'app funziona perfettamente senza cloud, le squadre sono
+                  salvate localmente
+                </div>
+              </div>
+            ) : (
+              <div>⚠️ {syncStatus.error}</div>
+            )}
           </div>
         )}
       </div>

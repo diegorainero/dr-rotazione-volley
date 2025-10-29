@@ -32,14 +32,50 @@ export interface CloudSyncStatus {
 
 export class CloudService {
   private static syncEnabled = false;
+  private static isFirebaseConfigured = false;
   private static listeners: Array<() => void> = [];
+  private static configError: string | null = null;
+
+  /**
+   * Verifica se Firebase è configurato correttamente
+   */
+  private static async checkFirebaseConfig(): Promise<boolean> {
+    try {
+      // Verifica se la configurazione è quella demo
+      if (db.app.options.projectId === 'demo-project-id') {
+        this.configError =
+          'Firebase non configurato - usando configurazione demo';
+        console.warn(
+          '⚠️ Firebase: Configurazione demo attiva. Cloud sync disabilitato.'
+        );
+        return false;
+      }
+
+      // Tenta una connessione di test
+      await ensureAuth();
+      this.isFirebaseConfigured = true;
+      this.configError = null;
+      return true;
+    } catch (error: any) {
+      this.configError = `Errore Firebase: ${error.message}`;
+      console.error('❌ Firebase non configurato:', error.message);
+      return false;
+    }
+  }
 
   /**
    * Attiva il sync cloud per l'utente
    */
   static async enableCloudSync(): Promise<boolean> {
+    // Prima verifica la configurazione Firebase
+    const isConfigured = await this.checkFirebaseConfig();
+    if (!isConfigured) {
+      console.warn('☁️ Cloud sync non disponibile - Firebase non configurato');
+      this.notifyListeners();
+      return false;
+    }
+
     try {
-      await ensureAuth();
       await enableNetwork(db);
       this.syncEnabled = true;
       console.log('☁️ Cloud sync attivato');
@@ -47,6 +83,7 @@ export class CloudService {
       return true;
     } catch (error) {
       console.error('❌ Errore attivazione cloud sync:', error);
+      this.configError = `Errore attivazione: ${(error as Error).message}`;
       return false;
     }
   }
@@ -69,7 +106,7 @@ export class CloudService {
    * Salva una squadra nel cloud
    */
   static async saveTeamToCloud(teamData: TeamData): Promise<string | null> {
-    if (!this.syncEnabled) return null;
+    if (!this.syncEnabled || !this.isFirebaseConfigured) return null;
 
     try {
       const userId = await ensureAuth();
@@ -102,6 +139,8 @@ export class CloudService {
   static async loadTeamFromCloud(
     teamCode: string
   ): Promise<CloudTeamData | null> {
+    if (!this.isFirebaseConfigured) return null;
+
     try {
       const userId = await ensureAuth();
       const cloudId = `${teamCode}_${userId}`;
@@ -246,10 +285,10 @@ export class CloudService {
    */
   static getSyncStatus(): CloudSyncStatus {
     return {
-      isEnabled: this.syncEnabled,
+      isEnabled: this.syncEnabled && this.isFirebaseConfigured,
       isOnline: navigator.onLine,
       lastSync: this.syncEnabled ? new Date() : null,
-      error: null,
+      error: this.configError,
     };
   }
 
