@@ -28,13 +28,15 @@ console.log('\n4️⃣ Test parsing URL avanzato...');
 const urlParams = new URL(advancedUrl).search;
 Object.defineProperty(window, 'location', {
   value: { search: urlParams },
-  writable: true
+  writable: true,
 });
 
 const parsedTeam = TeamCodeService.getTeamDataFromUrl();
 if (parsedTeam) {
   console.log(`✅ Dati team parsati: ${parsedTeam.name} (${parsedTeam.code})`);
-  console.log(`📅 Creato il: ${new Date(parsedTeam.createdAt).toLocaleDateString()}`);
+  console.log(
+    `📅 Creato il: ${new Date(parsedTeam.createdAt).toLocaleDateString()}`
+  );
 } else {
   console.log('❌ Errore nel parsing dei dati team');
 }
@@ -53,7 +55,11 @@ console.log('\n6️⃣ Test lista squadre...');
 const allTeams = TeamCodeService.getAllTeams();
 console.log(`📋 Squadre nel sistema: ${allTeams.length}`);
 allTeams.forEach((team, index) => {
-  console.log(`  ${index + 1}. ${team.name} (${team.code}) - Usata il: ${new Date(team.lastUsed).toLocaleDateString()}`);
+  console.log(
+    `  ${index + 1}. ${team.name} (${team.code}) - Usata il: ${new Date(
+      team.lastUsed
+    ).toLocaleDateString()}`
+  );
 });
 
 console.log('\n🎉 Test completati!');

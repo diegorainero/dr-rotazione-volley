@@ -10,7 +10,22 @@ interface ShareTeamProps {
 const ShareTeam: React.FC<ShareTeamProps> = ({ teamCode, teamName }) => {
   const [showQR, setShowQR] = useState(false);
 
-  const shareUrl = TeamCodeService.generateShareUrl(teamCode);
+  // Carica i dati completi del team per la condivisione avanzata
+  const teamData = TeamCodeService.loadTeam(teamCode);
+
+  // Usa il nuovo sistema che include i dati nel link
+  const shareUrl = teamData
+    ? (() => {
+        // Crea oggetto con dati per condivisione universale
+        const shareData = {
+          team: teamData,
+          timestamp: Date.now(),
+        };
+        const compressed = btoa(JSON.stringify(shareData));
+        const baseUrl = window.location.origin + window.location.pathname;
+        return `${baseUrl}?teamdata=${compressed}`;
+      })()
+    : TeamCodeService.generateShareUrl(teamCode); // fallback
 
   const copyToClipboard = () => {
     navigator.clipboard

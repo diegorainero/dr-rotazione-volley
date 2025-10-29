@@ -94,17 +94,17 @@ const VolleyballCourt: React.FC = () => {
     // 1. PRIMO: Controlla se c'è un team nell'URL (priorità massima)
     const urlTeamData = TeamCodeService.getTeamDataFromUrl();
     if (urlTeamData) {
-      console.log('🔗 Team trovato nell\'URL:', urlTeamData);
+      console.log("🔗 Team trovato nell'URL:", urlTeamData);
       setCurrentTeam(urlTeamData);
       // Pulisci URL per evitare loop
       window.history.replaceState({}, '', window.location.pathname);
       return;
     }
 
-    // 2. SECONDO: Controlla codice team semplice nell'URL  
+    // 2. SECONDO: Controlla codice team semplice nell'URL
     const urlTeamCode = TeamCodeService.getTeamCodeFromUrl();
     if (urlTeamCode) {
-      console.log('🔗 Codice team trovato nell\'URL:', urlTeamCode);
+      console.log("🔗 Codice team trovato nell'URL:", urlTeamCode);
       const existingTeam = TeamCodeService.loadTeam(urlTeamCode);
       if (existingTeam) {
         console.log('✅ Team caricato da codice URL');
