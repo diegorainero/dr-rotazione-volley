@@ -144,20 +144,30 @@ const VolleyballCourt: React.FC = () => {
   const convertRoleToDisplay = (role: string, playerId: number): string => {
     if (!isUnder13Mode) {
       // Modalità Senior: gestisce il Libero
-      const player = players.find(p => p.id === playerId);
+      const player = players.find((p) => p.id === playerId);
       if (!player) return role;
-      
+
       // Determina se il giocatore è in seconda linea (zone 1, 6, 5)
       const isBackRow = [1, 6, 5].includes(player.zone);
-      
+
       // Se è attiva la modalità Libero per questa squadra e il giocatore è C1/C2 in seconda linea
-      if (player.team === 'home' && liberoModeHome && isBackRow && (role === 'C1' || role === 'C2')) {
+      if (
+        player.team === 'home' &&
+        liberoModeHome &&
+        isBackRow &&
+        (role === 'C1' || role === 'C2')
+      ) {
         return 'L';
       }
-      if (player.team === 'away' && liberoModeAway && isBackRow && (role === 'C1' || role === 'C2')) {
+      if (
+        player.team === 'away' &&
+        liberoModeAway &&
+        isBackRow &&
+        (role === 'C1' || role === 'C2')
+      ) {
         return 'L';
       }
-      
+
       return role; // Modalità Senior normale: P, S1, C2, O, S2, C1
     }
 
@@ -449,13 +459,21 @@ const VolleyballCourt: React.FC = () => {
   // Funzioni per gestire il Libero
   const toggleLiberoHome = () => {
     setLiberoModeHome(!liberoModeHome);
-    setFeedback(liberoModeHome ? '👤 Libero disattivato (Casa)' : '🟡 Libero attivato (Casa)');
+    setFeedback(
+      liberoModeHome
+        ? '👤 Libero disattivato (Casa)'
+        : '🟡 Libero attivato (Casa)'
+    );
     setTimeout(() => setFeedback(''), 2000);
   };
 
   const toggleLiberoAway = () => {
     setLiberoModeAway(!liberoModeAway);
-    setFeedback(liberoModeAway ? '👤 Libero disattivato (Ospiti)' : '🟡 Libero attivato (Ospiti)');
+    setFeedback(
+      liberoModeAway
+        ? '👤 Libero disattivato (Ospiti)'
+        : '🟡 Libero attivato (Ospiti)'
+    );
     setTimeout(() => setFeedback(''), 2000);
   };
 
@@ -472,7 +490,8 @@ const VolleyballCourt: React.FC = () => {
       await loadSavedPositions(); // Ricarica la lista
 
       const modeText = isUnder13Mode ? 'Under 13' : 'Senior';
-      const liberoText = (!isUnder13Mode && liberoModeHome) ? ' (con Libero)' : '';
+      const liberoText =
+        !isUnder13Mode && liberoModeHome ? ' (con Libero)' : '';
       setFeedback(`💾 Ricezione salvata (${modeText}${liberoText})`);
       setTimeout(() => setFeedback(''), 2500);
       console.log('✅ Posizione di ricezione salvata per:', currentRotation);
@@ -489,24 +508,26 @@ const VolleyballCourt: React.FC = () => {
   const getCurrentRotationKey = (homeTeam: PlayerData[]): string => {
     // Ordina i giocatori per ID e prendi le loro zone per creare una chiave unica
     const sortedByZone = [...homeTeam].sort((a, b) => a.zone - b.zone);
-    
+
     // Crea la chiave base con ruoli e zone
-    const baseKey = sortedByZone.map((p) => {
-      // In modalità Senior, considera anche se il Libero è attivo per questo ruolo/zona
-      let displayRole = p.role;
-      if (!isUnder13Mode && liberoModeHome) {
-        const isBackRow = [1, 6, 5].includes(p.zone);
-        if (isBackRow && (p.role === 'C1' || p.role === 'C2')) {
-          displayRole = 'L';
+    const baseKey = sortedByZone
+      .map((p) => {
+        // In modalità Senior, considera anche se il Libero è attivo per questo ruolo/zona
+        let displayRole = p.role;
+        if (!isUnder13Mode && liberoModeHome) {
+          const isBackRow = [1, 6, 5].includes(p.zone);
+          if (isBackRow && (p.role === 'C1' || p.role === 'C2')) {
+            displayRole = 'L';
+          }
         }
-      }
-      return `${displayRole}:Z${p.zone}`;
-    }).join('-');
-    
+        return `${displayRole}:Z${p.zone}`;
+      })
+      .join('-');
+
     // Aggiunge prefisso per modalità e stato Libero
     const modePrefix = isUnder13Mode ? 'U13' : 'SR';
-    const liberoSuffix = (!isUnder13Mode && liberoModeHome) ? '-LIB' : '';
-    
+    const liberoSuffix = !isUnder13Mode && liberoModeHome ? '-LIB' : '';
+
     return `${modePrefix}-${baseKey}${liberoSuffix}`;
   };
 
@@ -533,7 +554,8 @@ const VolleyballCourt: React.FC = () => {
           })
         );
         const modeText = isUnder13Mode ? 'Under 13' : 'Senior';
-        const liberoText = (!isUnder13Mode && liberoModeHome) ? ' (con Libero)' : '';
+        const liberoText =
+          !isUnder13Mode && liberoModeHome ? ' (con Libero)' : '';
         setFeedback(`📍 Ricezione caricata (${modeText}${liberoText})`);
         setTimeout(() => setFeedback(''), 2500);
         console.log(
@@ -542,7 +564,8 @@ const VolleyballCourt: React.FC = () => {
         );
       } else {
         const modeText = isUnder13Mode ? 'Under 13' : 'Senior';
-        const liberoText = (!isUnder13Mode && liberoModeHome) ? ' (con Libero)' : '';
+        const liberoText =
+          !isUnder13Mode && liberoModeHome ? ' (con Libero)' : '';
         setFeedback(`⚠️ Nessuna ricezione per ${modeText}${liberoText}`);
         setTimeout(() => setFeedback(''), 2500);
         console.log(
@@ -995,7 +1018,7 @@ const VolleyballCourt: React.FC = () => {
               >
                 🟡 L Casa
               </button>
-              
+
               {/* Pulsante Libero Squadra Ospiti (destra) */}
               <button
                 onClick={toggleLiberoAway}
@@ -1014,47 +1037,47 @@ const VolleyballCourt: React.FC = () => {
           <div className='border-2 border-gray-500 bg-green-50 rounded-lg shadow-lg'>
             {/* @ts-ignore */}
             <Stage width={900} height={450}>
-            <Layer>
-              {/* Campo */}
-              <Rect
-                x={0}
-                y={0}
-                width={450}
-                height={450}
-                stroke='black'
-                fill='#eeeeee'
-                strokeWidth={2}
-              />
-              <Rect
-                x={450}
-                y={0}
-                width={450}
-                height={450}
-                fill='white'
-                stroke='black'
-                strokeWidth={2}
-              />
-              <Line
-                points={[450, 0, 450, 450]}
-                stroke='black'
-                strokeWidth={3}
-              />
-              <Line points={[300, 0, 300, 450]} stroke='#888' dash={[5, 5]} />
-              <Line points={[600, 0, 600, 450]} stroke='#888' dash={[5, 5]} />
-
-              {players.map((p) => (
-                <Player
-                  key={p.id}
-                  x={p.x}
-                  y={p.y}
-                  role={convertRoleToDisplay(p.role, p.id)}
-                  color={falli.includes(p.id) ? 'red' : p.color}
-                  draggable={p.team === 'home'}
-                  onDragEnd={(pos) => handleDrag(p.id, pos)}
+              <Layer>
+                {/* Campo */}
+                <Rect
+                  x={0}
+                  y={0}
+                  width={450}
+                  height={450}
+                  stroke='black'
+                  fill='#eeeeee'
+                  strokeWidth={2}
                 />
-              ))}
-            </Layer>
-          </Stage>
+                <Rect
+                  x={450}
+                  y={0}
+                  width={450}
+                  height={450}
+                  fill='white'
+                  stroke='black'
+                  strokeWidth={2}
+                />
+                <Line
+                  points={[450, 0, 450, 450]}
+                  stroke='black'
+                  strokeWidth={3}
+                />
+                <Line points={[300, 0, 300, 450]} stroke='#888' dash={[5, 5]} />
+                <Line points={[600, 0, 600, 450]} stroke='#888' dash={[5, 5]} />
+
+                {players.map((p) => (
+                  <Player
+                    key={p.id}
+                    x={p.x}
+                    y={p.y}
+                    role={convertRoleToDisplay(p.role, p.id)}
+                    color={falli.includes(p.id) ? 'red' : p.color}
+                    draggable={p.team === 'home'}
+                    onDragEnd={(pos) => handleDrag(p.id, pos)}
+                  />
+                ))}
+              </Layer>
+            </Stage>
           </div>
         </div>
 
@@ -1114,11 +1137,13 @@ const VolleyballCourt: React.FC = () => {
               </strong>
               <span className='ml-1 text-xs opacity-75'>(salvata)</span>
             </div>
-            
+
             {/* Indicatori Libero - Solo in modalità Senior */}
             {!isUnder13Mode && (liberoModeHome || liberoModeAway) && (
               <div className='bg-yellow-100 text-yellow-800 border border-yellow-200 text-sm px-3 py-1 rounded-full inline-flex items-center'>
-                🟡 Libero: {liberoModeHome && 'Casa'} {liberoModeHome && liberoModeAway && ' + '} {liberoModeAway && 'Ospiti'}
+                🟡 Libero: {liberoModeHome && 'Casa'}{' '}
+                {liberoModeHome && liberoModeAway && ' + '}{' '}
+                {liberoModeAway && 'Ospiti'}
               </div>
             )}
           </div>
@@ -1135,9 +1160,11 @@ const VolleyballCourt: React.FC = () => {
                 <strong>Rotazione attuale:</strong>
                 <br />
                 <span className='text-blue-800 font-medium'>
-                  {formatRotationKeyForDisplay(getCurrentRotationKey(
-                    players.filter((p) => p.team === 'home')
-                  ))}
+                  {formatRotationKeyForDisplay(
+                    getCurrentRotationKey(
+                      players.filter((p) => p.team === 'home')
+                    )
+                  )}
                 </span>
               </p>
               <p className='mb-2'>
@@ -1186,10 +1213,12 @@ const VolleyballCourt: React.FC = () => {
                     base della rotazione
                   </li>
                   <li>
-                    <strong>"🟡 L Casa/Ospiti":</strong> Attiva Libero (solo Senior) - sostituisce C1/C2 in seconda linea
+                    <strong>"🟡 L Casa/Ospiti":</strong> Attiva Libero (solo
+                    Senior) - sostituisce C1/C2 in seconda linea
                   </li>
                   <li>
-                    <strong>Ricezioni separate:</strong> Senior e Under 13 hanno salvataggi indipendenti
+                    <strong>Ricezioni separate:</strong> Senior e Under 13 hanno
+                    salvataggi indipendenti
                   </li>
                   <li>
                     <strong>"Salva Formazione":</strong> Richiede solo squadra e
