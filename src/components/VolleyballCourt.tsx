@@ -12,6 +12,7 @@ import {
 import { useResponsiveCanvas, useIsMobile } from '../hooks/useResponsiveCanvas';
 import TeamManager from './TeamManager';
 import { TeamCodeService, TeamData } from '../services/teamCodeService';
+import DebugTeamLoading from './DebugTeamLoading';
 
 interface PlayerData {
   id: number;
@@ -90,12 +91,38 @@ const VolleyballCourt: React.FC = () => {
     loadSavedPositions();
     loadFormations();
 
-    // Carica team corrente se presente
+    // 1. PRIMO: Controlla se c'è un team nell'URL (priorità massima)
+    const urlTeamData = TeamCodeService.getTeamDataFromUrl();
+    if (urlTeamData) {
+      console.log('🔗 Team trovato nell\'URL:', urlTeamData);
+      setCurrentTeam(urlTeamData);
+      // Pulisci URL per evitare loop
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    }
+
+    // 2. SECONDO: Controlla codice team semplice nell'URL  
+    const urlTeamCode = TeamCodeService.getTeamCodeFromUrl();
+    if (urlTeamCode) {
+      console.log('🔗 Codice team trovato nell\'URL:', urlTeamCode);
+      const existingTeam = TeamCodeService.loadTeam(urlTeamCode);
+      if (existingTeam) {
+        console.log('✅ Team caricato da codice URL');
+        setCurrentTeam(existingTeam);
+        return;
+      } else {
+        console.log('❌ Team con codice non trovato localmente');
+      }
+    }
+
+    // 3. TERZO: Carica team corrente se presente nel localStorage
     const team = TeamCodeService.getCurrentTeam();
     if (team) {
+      console.log('📱 Team caricato dal localStorage:', team);
       setCurrentTeam(team);
     } else {
       // Se non c'è team corrente, mostra il manager
+      console.log('👥 Nessun team trovato, mostra manager');
       setShowTeamManager(true);
     }
   }, []);
@@ -1591,6 +1618,9 @@ const VolleyballCourt: React.FC = () => {
             onTeamSelected={handleTeamSelected}
           />
         )}
+
+        {/* Debug Component per troubleshooting */}
+        <DebugTeamLoading />
       </div>
     </div>
   );

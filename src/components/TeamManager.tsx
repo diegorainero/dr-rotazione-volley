@@ -20,31 +20,7 @@ const TeamManager: React.FC<TeamManagerProps> = ({
 
   useEffect(() => {
     loadTeams();
-
-    // Prima prova con i nuovi dati embedded nell'URL
-    const urlTeamData = TeamCodeService.getTeamDataFromUrl();
-    if (urlTeamData && !currentTeam) {
-      onTeamSelected(urlTeamData);
-      // Pulisci l'URL dopo l'importazione
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
-    }
-
-    // Fallback: controlla se c'è un team code nell'URL (vecchio sistema)
-    const urlTeamCode = TeamCodeService.getTeamCodeFromUrl();
-    if (urlTeamCode && !currentTeam) {
-      const team = TeamCodeService.loadTeam(urlTeamCode);
-      if (team) {
-        onTeamSelected(team);
-        // Pulisci l'URL dopo il caricamento
-        window.history.replaceState(
-          {},
-          document.title,
-          window.location.pathname
-        );
-      }
-    }
-  }, [currentTeam, onTeamSelected]);
+  }, []);
 
   const loadTeams = () => {
     const allTeams = TeamCodeService.getAllTeams();
