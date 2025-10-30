@@ -2,7 +2,8 @@
 
 **Un'applicazione web completa per gestire rotazioni e formazioni nella pallavolo**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-blue?logo=github)](https://diegorainero.github.io/dr-rotazioni-volley)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Firebase%20Hosting-orange?logo=firebase)](https://dr-rotazioni-volley.web.app)
+[![GitHub Pages](https://img.shields.io/badge/Mirror-GitHub%20Pages-blue?logo=github)](https://diegorainero.github.io/dr-rotazioni-volley)
 
 ---
 
@@ -16,6 +17,7 @@
 - **Campo interattivo**: Trascina i giocatori per posizionarli
 - **Rotazioni intelligenti**: Automatiche per entrambe le squadre
 - **Controllo falli**: Rileva automaticamente errori di posizione
+- **👁️ Tracking avversari**: Seleziona e segui giocatori avversari con colore dorato
 
 ### � Sistema Ricezioni
 - **Salvataggio separato**: Senior e Under 13 indipendenti
@@ -23,9 +25,22 @@
 - **Caricamento silenzioso**: Senza popup fastidiosi
 
 ### 💾 Persistenza Dati
-- **Database locale**: IndexedDB per salvataggi offline
-- **Formazioni multiple**: Gestione per squadre diverse
-- **Import/Export**: Backup e condivisione configurazioni
+- **Database locale**: localStorage per salvataggi offline immediati
+- **Cloud Firestore**: Sincronizzazione universale tra dispositivi
+- **🔄 Auto-Sync**: Backup automatico ogni X minuti con retry intelligente
+- **Migrazione dati**: Sistema completo per trasferire dati locale ↔ cloud
+- **Gestione offline**: Funzionamento robusto anche senza connessione
+- **Formazioni multiple**: Gestione per squadre diverse con codici univoci
+- **Autenticazione**: Google OAuth e accesso anonimo per privacy
+
+### 📋 **NUOVO** Sistema Formazioni Cloud
+- **☁️ Salvataggio Ibrido**: Formazioni salvate automaticamente locale + cloud
+- **🏷️ Badge Identificativo**: Distingui facilmente formazioni locali (💾) vs cloud (☁️)
+- **🔄 Sincronizzazione**: Carica formazioni locali nel cloud con un click
+- **📊 Statistiche Live**: Conteggi in tempo reale di formazioni per fonte
+- **🛡️ Sicurezza**: Accesso solo alle proprie formazioni (user-based)
+- **📱 Multi-Device**: Accedi alle tue formazioni da qualsiasi dispositivo
+- **🚫 No Duplicati**: Sistema intelligente che evita duplicazioni
 
 ### 📱 Interfaccia
 - **Header compatto**: Tutti i controlli organizzati
@@ -37,9 +52,24 @@
 ## 🚀 Deploy e Utilizzo
 
 ### 🌐 App Live
-L'applicazione è già deployata e pronta all'uso:
-- **URL**: https://diegorainero.github.io/dr-rotazioni-volley
-- **Accesso**: Immediato da qualsiasi dispositivo
+L'applicazione è deployata su Firebase Hosting:
+
+**🔥 Firebase Hosting**:
+- **URL**: https://dr-rotazioni-volley.web.app
+- **Vantaggi**: 
+  - ☁️ **Sincronizzazione cloud** con Firestore
+  - 🔐 **Autenticazione Google** sicura
+  - 🔄 **Migrazione dati** locale ↔ cloud
+  - 📱 **Accesso universale** da qualsiasi dispositivo
+  - ⚡ **Performance ottimizzate** e CDN globale
+
+**📊 Nuove Funzionalità Cloud**:
+- **🔄 Auto-Sync**: Sincronizzazione automatica ogni 5 minuti  
+- **Gestione squadre**: Codici univoci per condivisione sicura
+- **Backup intelligente**: Dati sempre al sicuro con retry automatico
+- **Accesso multi-dispositivo**: Le tue squadre sempre sincronizzate
+- **Risoluzione errori**: Gestione automatica problemi connettività
+- **Configurazione flessibile**: Intervalli da 1 a 60 minuti
 
 ### 🛠️ Sviluppo Locale
 
@@ -55,7 +85,16 @@ npm install
 npm start
 ```
 
-#### Deploy:
+#### Deploy Firebase:
+```bash
+# Deploy completo (build + deploy)
+npm run firebase:deploy:full
+
+# Oppure usa lo script automatico
+./deploy.sh
+```
+
+#### Deploy GitHub Pages:
 ```bash
 npm run deploy
 ```
@@ -80,15 +119,27 @@ Consulta `DEPLOY_GUIDE.md` per istruzioni complete su:
 - **Etichette**: P, Z4, Z2 (semplificate)
 - **Sistema**: Adatto alle categorie giovanili
 
-### 3️⃣ Gestione Ricezioni
+### 3️⃣ Tracking Avversari (NUOVO!)
+- **👁️ Modalità tracking**: Attiva/disattiva con un click
+- **Selezione visuale**: Click su giocatore avversario per tracciarlo
+- **Colore dorato**: Il giocatore selezionato diventa dorato e resta visibile
+- **Analisi tattica**: Segui movimenti e posizioni durante le rotazioni
+- **Feedback real-time**: Mostra quale giocatore stai seguendo e la sua zona
+
+### 4️⃣ Gestione Ricezioni
 - **Salva**: Solo rotazione corrente (distintamente per modalità)
 - **Carica**: Automatico e silenzioso  
 - **Reset**: Torna alle posizioni base
 
-### 4️⃣ Formazioni Complete
-- **Salva**: Nome squadra + descrizione
-- **Carica**: Visualizza e applica formazioni salvate
-- **Gestione**: Elimina, esporta, importa
+### 5️⃣ Gestione Cloud 
+- **🔄 Auto-Sync**: Backup automatico ogni 5 minuti (configurabile 1-60 min)
+- **Indicatore intelligente**: Stato connessione e prossimo sync visibili
+- **Retry automatico**: Risolve errori WebChannel 400 e disconnessioni
+- **Migrazione guidata**: Trasferisci squadre locali → cloud
+- **Backup sicuro**: Scarica squadre cloud → locale  
+- **Confronto dati**: Visualizza differenze e conflitti
+- **Gestione offline**: Pause intelligenti e riconnessione automatica
+- **Accesso universale**: Le tue squadre sempre sincronizzate
 
 ---
 
@@ -96,7 +147,8 @@ Consulta `DEPLOY_GUIDE.md` per istruzioni complete su:
 
 ### Per Allenatori
 - ✅ Preparazione rotazioni di ricezione
-- ✅ Studio formazioni avversarie
+- ✅ Studio formazioni avversarie con tracking visuale
+- ✅ Analisi tattica giocatori chiave
 - ✅ Correzione errori di posizione
 - ✅ Backup configurazioni di squadra
 
@@ -115,7 +167,8 @@ Consulta `DEPLOY_GUIDE.md` per istruzioni complete su:
 - **Database**: Dexie.js (IndexedDB wrapper)
 - **Styling**: Tailwind CSS
 - **Build**: Create React App
-- **Deploy**: GitHub Pages
+- **Deploy**: Firebase Hosting + GitHub Pages
+- **Cloud**: Firebase Auth + Firestore
 
 ---
 

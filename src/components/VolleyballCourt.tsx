@@ -3,12 +3,16 @@ import { Stage, Layer, Rect, Line } from 'react-konva';
 import Player from './Player';
 import {
   receivePositionsService,
-  rotationsService,
   SavedReceivePosition,
-  SavedRotation,
   db,
   resetDatabase,
 } from '../db/database';
+import {
+  FormationService,
+  UnifiedFormation,
+} from '../services/formationService';
+import { CloudService } from '../services/cloudService';
+import { FirestoreService } from '../services/firestoreService';
 import { useResponsiveCanvas, useIsMobile } from '../hooks/useResponsiveCanvas';
 import TeamManager from './TeamManager';
 import { TeamCodeService, TeamData } from '../services/teamCodeService';
@@ -22,6 +26,8 @@ interface PlayerData {
   team: 'home' | 'away';
   color: string;
   role: string; // Il ruolo fisso del giocatore (P, S1, C2, O, S2, C1)
+  isTracked?: boolean; // Se il giocatore è in modalità tracking
+  trackColor?: string; // Colore personalizzato per il tracking
 }
 
 // posizioni iniziali per la tua squadra (a sinistra)
@@ -57,7 +63,9 @@ const VolleyballCourt: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showFormations, setShowFormations] = useState(false);
   const [showLoadFormations, setShowLoadFormations] = useState(false);
-  const [savedFormations, setSavedFormations] = useState<SavedRotation[]>([]);
+  const [savedFormations, setSavedFormations] = useState<UnifiedFormation[]>(
+    []
+  );
   const [teamNames, setTeamNames] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string>('');
   // Stati per il Libero
@@ -77,6 +85,12 @@ const VolleyballCourt: React.FC = () => {
   // Stati per gestione squadre
   const [currentTeam, setCurrentTeam] = useState<TeamData | null>(null);
   const [showTeamManager, setShowTeamManager] = useState(false);
+
+  // Stati per tracking giocatori avversari
+  const [trackedAwayPlayer, setTrackedAwayPlayer] = useState<number | null>(
+    null
+  );
+  const [trackingMode, setTrackingMode] = useState(false);
 
   // Salva la modalità nel localStorage quando cambia
   useEffect(() => {
@@ -150,8 +164,8 @@ const VolleyballCourt: React.FC = () => {
       const rotationsCount = await db.rotations.count();
       console.log('📊 Conteggio rotazioni nel DB:', rotationsCount);
 
-      const formations = await rotationsService.getAll();
-      const teams = await rotationsService.getAllTeamNames();
+      const formations = await FormationService.getAllFormations();
+      const teams = await FormationService.getAllTeamNames();
 
       console.log('📊 Formazioni caricate:', formations.length, formations);
       console.log('🏐 Squadre trovate:', teams.length, teams);
@@ -482,6 +496,44 @@ const VolleyballCourt: React.FC = () => {
     return falli;
   };
 
+  // Funzioni per tracking giocatori avversari
+  const handleAwayPlayerClick = (playerId: number) => {
+    if (!trackingMode) return;
+
+    setTrackedAwayPlayer((prev) => {
+      if (prev === playerId) {
+        // Se clicco sullo stesso giocatore, disattivo il tracking
+        return null;
+      }
+      return playerId;
+    });
+  };
+
+  const toggleTrackingMode = () => {
+    setTrackingMode((prev) => {
+      if (prev) {
+        // Se disattivo il tracking mode, resetto anche il giocatore tracciato
+        setTrackedAwayPlayer(null);
+      }
+      return !prev;
+    });
+  };
+
+  const getPlayerColor = (player: PlayerData) => {
+    // Se è un giocatore avversario e è in tracking
+    if (player.team === 'away' && trackedAwayPlayer === player.id) {
+      return '#FFD700'; // Gold per il giocatore tracciato
+    }
+
+    // Colore normale in base ai falli
+    const falli = checkFalli();
+    if (falli.includes(player.id)) {
+      return 'red';
+    }
+
+    return player.color;
+  };
+
   const falli = checkFalli();
 
   // Reset le posizioni della squadra home alle posizioni iniziali di zona
@@ -797,7 +849,7 @@ const VolleyballCourt: React.FC = () => {
       console.log('🏠 Squadra home:', homeTeam);
       console.log('👥 Squadra away:', awayTeam);
 
-      await rotationsService.save(
+      await FormationService.saveFormation(
         autoName,
         teamName,
         homeTeam.map((p) => ({ zone: p.zone, x: p.x, y: p.y, role: p.role })),
@@ -826,46 +878,46 @@ const VolleyballCourt: React.FC = () => {
   };
 
   // Carica una formazione specifica
-  const loadFormation = async (formationId: number) => {
+  const loadFormation = async (formation: UnifiedFormation) => {
     try {
       setLoading(true);
-      const formation = await rotationsService.load(formationId);
 
-      if (formation) {
-        // Applica le posizioni della formazione ai giocatori
-        setPlayers((prev) =>
-          prev.map((p) => {
-            if (p.team === 'home') {
-              const savedPlayer = formation.homePositions.find(
-                (sp) => sp.role === p.role
-              );
-              return savedPlayer
-                ? {
-                    ...p,
-                    x: savedPlayer.x,
-                    y: savedPlayer.y,
-                    zone: savedPlayer.zone,
-                  }
-                : p;
-            } else {
-              const savedPlayer = formation.awayPositions.find(
-                (sp) => sp.role === p.role
-              );
-              return savedPlayer
-                ? {
-                    ...p,
-                    x: savedPlayer.x,
-                    y: savedPlayer.y,
-                    zone: savedPlayer.zone,
-                  }
-                : p;
-            }
-          })
-        );
-        alert(
-          `✅ Formazione "${formation.name}" caricata con successo!\n\nLa squadra "${formation.teamName}" è ora posizionata sul campo.`
-        );
-      }
+      // Applica le posizioni della formazione ai giocatori
+      setPlayers((prev) =>
+        prev.map((p) => {
+          if (p.team === 'home') {
+            const savedPlayer = formation.homePositions.find(
+              (sp: any) => sp.role === p.role
+            );
+            return savedPlayer
+              ? {
+                  ...p,
+                  x: savedPlayer.x,
+                  y: savedPlayer.y,
+                  zone: savedPlayer.zone,
+                }
+              : p;
+          } else {
+            const savedPlayer = formation.awayPositions.find(
+              (sp: any) => sp.role === p.role
+            );
+            return savedPlayer
+              ? {
+                  ...p,
+                  x: savedPlayer.x,
+                  y: savedPlayer.y,
+                  zone: savedPlayer.zone,
+                }
+              : p;
+          }
+        })
+      );
+
+      const sourceText =
+        formation.source === 'cloud' ? '☁️ cloud' : '💾 locale';
+      alert(
+        `✅ Formazione "${formation.name}" caricata con successo da ${sourceText}!\n\nLa squadra "${formation.teamName}" è ora posizionata sul campo.`
+      );
     } catch (error) {
       console.error('Errore nel caricare la formazione:', error);
       alert('❌ Errore nel caricare la formazione. Riprova.');
@@ -875,20 +927,32 @@ const VolleyballCourt: React.FC = () => {
   };
 
   // Elimina una formazione
-  const deleteFormation = async (
-    formationId: number,
-    formationName: string
-  ) => {
+  const deleteFormation = async (formation: UnifiedFormation) => {
     if (
       window.confirm(
-        `Sei sicuro di voler eliminare la formazione "${formationName}"?`
+        `Sei sicuro di voler eliminare la formazione "${
+          formation.name
+        }"?\n\nFonte: ${
+          formation.source === 'cloud' ? '☁️ Cloud' : '💾 Locale'
+        }`
       )
     ) {
       try {
         setLoading(true);
-        await rotationsService.delete(formationId);
-        await loadFormations();
-        alert(`✅ Formazione "${formationName}" eliminata con successo!`);
+
+        const success = await FormationService.deleteFormation(
+          formation.id!,
+          formation.source
+        );
+
+        if (success) {
+          await loadFormations();
+          alert(`✅ Formazione "${formation.name}" eliminata con successo!`);
+        } else {
+          alert(
+            "❌ Errore nell'eliminazione della formazione. Verifica i permessi."
+          );
+        }
       } catch (error) {
         console.error("Errore nell'eliminazione:", error);
         alert("❌ Errore nell'eliminazione della formazione. Riprova.");
@@ -1210,7 +1274,7 @@ const VolleyballCourt: React.FC = () => {
                       x={p.x * canvasSize.scale}
                       y={p.y * canvasSize.scale}
                       role={convertRoleToDisplay(p.role, p.id)}
-                      color={falli.includes(p.id) ? 'red' : p.color}
+                      color={getPlayerColor(p)}
                       scale={canvasSize.scale}
                       draggable={p.team === 'home'}
                       onDragEnd={(pos) =>
@@ -1219,6 +1283,11 @@ const VolleyballCourt: React.FC = () => {
                           y: pos.y / canvasSize.scale,
                         })
                       }
+                      onClick={() => {
+                        if (p.team === 'away') {
+                          handleAwayPlayerClick(p.id);
+                        }
+                      }}
                     />
                   ))}
                 </Layer>
@@ -1231,6 +1300,19 @@ const VolleyballCourt: React.FC = () => {
         {feedback && (
           <div className='bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-blue-800 text-sm font-medium animate-pulse'>
             {feedback}
+          </div>
+        )}
+
+        {/* FEEDBACK TRACKING */}
+        {trackingMode && (
+          <div className='bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2 text-yellow-800 text-sm font-medium'>
+            {trackedAwayPlayer
+              ? `🎯 Tracciando giocatore avversario ${
+                  players.find((p) => p.id === trackedAwayPlayer)?.role
+                } (zona ${
+                  players.find((p) => p.id === trackedAwayPlayer)?.zone
+                })`
+              : '👁️ Modalità tracking attiva - Clicca su un giocatore avversario per seguirlo'}
           </div>
         )}
 
@@ -1263,6 +1345,23 @@ const VolleyballCourt: React.FC = () => {
             }`}
           >
             🔄 {isMobile ? 'Entrambe' : 'Ruota Entrambe'}
+          </button>
+          <button
+            onClick={toggleTrackingMode}
+            className={`${
+              trackingMode
+                ? 'bg-yellow-600 hover:bg-yellow-700'
+                : 'bg-gray-600 hover:bg-gray-700'
+            } text-white rounded-lg font-medium shadow-md transition-all ${
+              isMobile ? 'px-4 py-3 text-sm min-h-[50px]' : 'px-6 py-3'
+            }`}
+          >
+            👁️{' '}
+            {isMobile
+              ? 'Track'
+              : trackingMode
+              ? 'Disattiva Track'
+              : 'Traccia Avversario'}
           </button>
         </div>
 
@@ -1400,17 +1499,112 @@ const VolleyballCourt: React.FC = () => {
             )}
 
             <div className='grid grid-cols-1 gap-4'>
-              {/* Statistiche */}
+              {/* Statistiche e Azioni */}
               <div className='bg-white rounded p-3 border'>
                 <h4 className='font-semibold text-gray-800 mb-2'>
-                  📊 Statistiche
+                  📊 Statistiche e Azioni
                 </h4>
-                <p className='text-sm text-gray-600'>
-                  <strong>Formazioni salvate:</strong> {savedFormations.length}
-                </p>
-                <p className='text-sm text-gray-600'>
-                  <strong>Squadre diverse:</strong> {teamNames.length}
-                </p>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <div>
+                    <p className='text-sm text-gray-600'>
+                      <strong>Formazioni salvate:</strong>{' '}
+                      {savedFormations.length}
+                    </p>
+                    <p className='text-sm text-gray-600'>
+                      <strong>Squadre diverse:</strong> {teamNames.length}
+                    </p>
+                    <p className='text-xs text-gray-500 mt-1'>
+                      {
+                        savedFormations.filter((f) => f.source === 'cloud')
+                          .length
+                      }{' '}
+                      nel cloud,{' '}
+                      {
+                        savedFormations.filter((f) => f.source === 'local')
+                          .length
+                      }{' '}
+                      locali
+                    </p>
+                  </div>
+                  <div className='flex flex-col gap-2'>
+                    <button
+                      onClick={async () => {
+                        try {
+                          setLoading(true);
+                          const result = await FormationService.syncToCloud();
+                          if (result.synced > 0) {
+                            await loadFormations(); // Ricarica per mostrare i nuovi dati cloud
+                            alert(
+                              `✅ Sincronizzazione completata!\n\n${
+                                result.synced
+                              } formazioni sincronizzate nel cloud.\n${
+                                result.failed > 0
+                                  ? `${result.failed} errori.`
+                                  : ''
+                              }`
+                            );
+                          } else {
+                            alert(
+                              `⚠️ Nessuna formazione da sincronizzare.\n\n${result.errors.join(
+                                '\n'
+                              )}`
+                            );
+                          }
+                        } catch (error: any) {
+                          alert(`❌ Errore sincronizzazione: ${error.message}`);
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      disabled={loading}
+                      className='bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 text-xs rounded disabled:opacity-50 transition-colors'
+                    >
+                      ☁️ Sincronizza con Cloud
+                    </button>
+                    <button
+                      onClick={() => {
+                        console.log('🔍 Debug formazioni:', savedFormations);
+                        loadFormations();
+                      }}
+                      className='bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 text-xs rounded transition-colors'
+                    >
+                      🔄 Ricarica Formazioni
+                    </button>
+                    <button
+                      onClick={() => {
+                        const syncStatus = CloudService.getSyncStatus();
+                        const userInfo = FirestoreService.getCurrentUserInfo();
+
+                        console.log('🔍 Debug completo:', {
+                          syncStatus,
+                          userInfo,
+                          formazioni: savedFormations,
+                        });
+
+                        alert(
+                          `🔍 Debug Info:\n\nCloud Sync: ${
+                            syncStatus.isEnabled
+                          }\nOnline: ${
+                            syncStatus.isOnline
+                          }\nAuth: ${!!userInfo}\nUser: ${
+                            userInfo?.email || 'N/A'
+                          }\nError: ${
+                            syncStatus.error || 'Nessuno'
+                          }\n\nFormazioni: ${savedFormations.length}\nLocali: ${
+                            savedFormations.filter((f) => f.source === 'local')
+                              .length
+                          }\nCloud: ${
+                            savedFormations.filter((f) => f.source === 'cloud')
+                              .length
+                          }`
+                        );
+                      }}
+                      className='bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 text-xs rounded transition-colors'
+                    >
+                      🔍 Debug Stato
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Lista formazioni per squadra */}
@@ -1430,30 +1624,41 @@ const VolleyballCourt: React.FC = () => {
                           className='flex items-center justify-between bg-gray-50 rounded p-2'
                         >
                           <div className='flex-1'>
-                            <p className='font-medium text-sm'>
-                              {formation.name}
-                            </p>
+                            <div className='flex justify-between items-center'>
+                              <p className='font-medium text-sm'>
+                                {formation.name}
+                              </p>
+                              <span
+                                className={`text-xs px-1 py-0.5 rounded ${
+                                  formation.source === 'cloud'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'bg-gray-100 text-gray-600'
+                                }`}
+                              >
+                                {formation.source === 'cloud' ? '☁️' : '💾'}
+                              </span>
+                            </div>
                             {formation.description && (
                               <p className='text-xs text-gray-500'>
                                 {formation.description}
                               </p>
                             )}
                             <p className='text-xs text-gray-400'>
-                              {formation.updatedAt.toLocaleDateString()}
+                              {new Date(
+                                formation.updatedAt
+                              ).toLocaleDateString()}
                             </p>
                           </div>
                           <div className='flex gap-2'>
                             <button
-                              onClick={() => loadFormation(formation.id!)}
+                              onClick={() => loadFormation(formation)}
                               disabled={loading}
                               className='bg-blue-500 text-white px-2 py-1 text-xs rounded hover:bg-blue-600 disabled:opacity-50'
                             >
                               📥 Carica
                             </button>
                             <button
-                              onClick={() =>
-                                deleteFormation(formation.id!, formation.name)
-                              }
+                              onClick={() => deleteFormation(formation)}
                               disabled={loading}
                               className='bg-red-500 text-white px-2 py-1 text-xs rounded hover:bg-red-600 disabled:opacity-50'
                             >
@@ -1562,24 +1767,43 @@ const VolleyballCourt: React.FC = () => {
                             className='bg-white rounded-lg p-3 border shadow-sm hover:shadow-md transition-shadow'
                           >
                             <div className='mb-2'>
-                              <h5 className='font-medium text-gray-800'>
-                                {formation.name}
-                              </h5>
+                              <div className='flex justify-between items-start mb-1'>
+                                <h5 className='font-medium text-gray-800'>
+                                  {formation.name}
+                                </h5>
+                                <span
+                                  className={`text-xs px-2 py-1 rounded-full ${
+                                    formation.source === 'cloud'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-gray-100 text-gray-600'
+                                  }`}
+                                >
+                                  {formation.source === 'cloud'
+                                    ? '☁️ Cloud'
+                                    : '💾 Locale'}
+                                </span>
+                              </div>
                               {formation.description && (
                                 <p className='text-xs text-gray-500 mt-1'>
                                   {formation.description}
                                 </p>
                               )}
                               <p className='text-xs text-gray-400 mt-1'>
-                                📅 {formation.updatedAt.toLocaleDateString()}{' '}
-                                alle {formation.updatedAt.toLocaleTimeString()}
+                                📅{' '}
+                                {new Date(
+                                  formation.updatedAt
+                                ).toLocaleDateString()}{' '}
+                                alle{' '}
+                                {new Date(
+                                  formation.updatedAt
+                                ).toLocaleTimeString()}
                               </p>
                             </div>
 
                             <div className='flex gap-2'>
                               <button
                                 onClick={() => {
-                                  loadFormation(formation.id!);
+                                  loadFormation(formation);
                                   setShowLoadFormations(false);
                                 }}
                                 disabled={loading}
@@ -1588,9 +1812,7 @@ const VolleyballCourt: React.FC = () => {
                                 📥 Carica Formazione
                               </button>
                               <button
-                                onClick={() =>
-                                  deleteFormation(formation.id!, formation.name)
-                                }
+                                onClick={() => deleteFormation(formation)}
                                 disabled={loading}
                                 className='bg-red-500 text-white px-3 py-2 text-sm rounded-lg hover:bg-red-600 disabled:opacity-50'
                               >

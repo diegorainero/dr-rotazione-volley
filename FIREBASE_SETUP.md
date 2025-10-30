@@ -113,6 +113,27 @@ const firebaseConfig = {
 - Controlla che la configurazione in `firebase.ts` sia corretta
 - Assicurati che Firestore e Authentication siano abilitati
 
+### Errore "unauthorized-domain" 🚫
+**Problema più comune** - Il dominio non è autorizzato per l'autenticazione Google.
+
+**Risoluzione:**
+1. Vai su [Firebase Console](https://console.firebase.google.com)
+2. Seleziona il tuo progetto
+3. Menu laterale: **Authentication** → **Settings**
+4. Scorri fino a **"Authorized domains"**
+5. Clicca **"Add domain"** e aggiungi:
+   - `localhost` (per development)
+   - Il tuo dominio di produzione
+   - Domini Netlify/Vercel se li usi
+6. **Salva** le modifiche
+
+**Domini comuni da aggiungere:**
+- `localhost` (development)  
+- `127.0.0.1` (development alternativo)
+- `tuodominio.com` (produzione)
+- `app-name.netlify.app` (Netlify)
+- `app-name.vercel.app` (Vercel)
+
 ### Errore "Permission denied"
 - Vai su Firestore Database → Regole
 - Per il testing, usa queste regole temporanee:
@@ -126,6 +147,11 @@ service cloud.firestore {
   }
 }
 ```
+
+### Errore "operation-not-allowed"
+- Vai su Authentication → Sign-in method
+- Assicurati che **Google** sia abilitato
+- Inserisci email di supporto progetto se richiesta
 
 ### L'app non funziona offline
 - L'app dovrebbe funzionare sempre offline
@@ -165,11 +191,28 @@ service cloud.firestore {
 
 ---
 
+## ⚡ Quick Fix "unauthorized-domain"
+
+**Se ricevi l'errore subito:**
+
+1. 🚀 **[Apri Firebase Console](https://console.firebase.google.com)**
+2. 📁 Seleziona progetto `dr-rotazioni-volley`  
+3. 🔐 Vai su **Authentication** → **Settings**
+4. 📝 Nella sezione **"Authorized domains"** clicca **"Add domain"**
+5. ➕ Aggiungi: `localhost` e il dominio corrente
+6. 💾 **Salva**
+
+**Test rapido:** Apri console browser e scrivi:
+```javascript
+console.log('Current domain:', window.location.origin);
+```
+
 ## ✅ Checklist finale
 
 - [ ] Progetto Firebase creato
 - [ ] Firestore Database abilitato
-- [ ] Authentication (Anonymous) abilitato  
+- [ ] Authentication (Google + Anonymous) abilitato  
+- [ ] **Domini autorizzati configurati** ⚠️ 
 - [ ] Configurazione copiata in `firebase.ts`
 - [ ] App ricaricata e testata
 - [ ] Cloud Sync attivato con successo

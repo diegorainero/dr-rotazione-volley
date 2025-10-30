@@ -6,6 +6,7 @@ import {
   signInAnonymous,
   signOut,
   AuthType,
+  getUnauthorizedDomainInstructions,
 } from '../config/firebase';
 import { useAuth } from '../hooks/useAuth';
 
@@ -161,8 +162,38 @@ const AuthManager: React.FC<AuthManagerProps> = ({
       )}
 
       {authError && (
-        <div className='mt-3 text-red-600 text-sm bg-red-50 p-2 rounded'>
-          ⚠️ {authError}
+        <div className='mt-3 text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-3'>
+          {authError.includes('Dominio non autorizzato') ? (
+            <div>
+              <div className='font-medium text-red-800 mb-2'>
+                🚫 Dominio Non Autorizzato
+              </div>
+              <div className='text-red-700 text-xs space-y-1'>
+                {getUnauthorizedDomainInstructions().map(
+                  (instruction, index) => (
+                    <div
+                      key={index}
+                      className={
+                        instruction.startsWith('💡') ? 'font-medium mt-2' : ''
+                      }
+                    >
+                      {instruction}
+                    </div>
+                  )
+                )}
+              </div>
+              <button
+                onClick={() =>
+                  window.open('https://console.firebase.google.com', '_blank')
+                }
+                className='mt-2 px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200'
+              >
+                🔧 Apri Firebase Console
+              </button>
+            </div>
+          ) : (
+            <div>⚠️ {authError}</div>
+          )}
         </div>
       )}
 

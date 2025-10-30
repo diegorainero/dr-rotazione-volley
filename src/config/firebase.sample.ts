@@ -15,13 +15,13 @@ import {
 
 // Configurazione Firebase - Progetto dr-rotazioni-volley
 const firebaseConfig = {
-  apiKey: 'AIzaSyDjr8wt1HSozTxUN8HVTTAqyPfn-8a6Axo',
-  authDomain: 'dr-rotazioni-volley.firebaseapp.com',
-  projectId: 'dr-rotazioni-volley',
-  storageBucket: 'dr-rotazioni-volley.firebasestorage.app',
-  messagingSenderId: '297241495629',
-  appId: '1:297241495629:web:db135e474dca153d443404',
-  measurementId: 'G-455701GZZ0',
+  apiKey: 'xxx',
+  authDomain: 'xxx',
+  projectId: 'xxx',
+  storageBucket: 'xxx',
+  messagingSenderId: 'xxx',
+  appId: 'xxx',
+  measurementId: 'xxx',
 };
 
 // Inizializza Firebase
