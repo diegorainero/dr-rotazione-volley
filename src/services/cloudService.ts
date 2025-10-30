@@ -33,7 +33,7 @@ export interface CloudSyncStatus {
 export class CloudService {
   private static syncEnabled = false;
   private static isFirebaseConfigured = false;
-  private static listeners: Array<() => void> = [];
+  private static listeners: Set<() => void> = new Set();
   private static configError: string | null = null;
 
   /**
@@ -350,15 +350,18 @@ export class CloudService {
    * Listener per cambi di status
    */
   static addSyncStatusListener(callback: () => void): () => void {
-    this.listeners.push(callback);
+    this.listeners.add(callback);
     return () => {
-      this.listeners = this.listeners.filter((l) => l !== callback);
+      this.listeners.delete(callback);
     };
   }
 
-  private static notifyListeners(): void {
-    this.listeners.forEach((listener) => listener());
-  }
+  private static notifyListeners = (() => {
+    const { debounce } = require('../utils/performance');
+    return debounce(() => {
+      this.listeners.forEach((listener) => listener());
+    }, 100); // Debounce notifications per 100ms
+  })();
 
   /**
    * Backup completo di tutte le squadre locali nel cloud
