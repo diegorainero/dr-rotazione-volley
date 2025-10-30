@@ -1,22 +1,23 @@
 // src/components/CloudSync.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { User } from 'firebase/auth';
 import { CloudService, CloudSyncStatus } from '../services/cloudService';
 import { TeamCodeService } from '../services/teamCodeService';
 import AuthManager from './AuthManager';
-import { getCurrentUser } from '../config/firebase';
+import { useAuth } from '../hooks/useAuth';
 
 interface CloudSyncProps {
   onSyncStatusChange?: (status: CloudSyncStatus) => void;
 }
 
 const CloudSync: React.FC<CloudSyncProps> = ({ onSyncStatusChange }) => {
+  const { user: currentUser } = useAuth();
   const [syncStatus, setSyncStatus] = useState<CloudSyncStatus>(
     CloudService.getSyncStatus()
   );
   const [isLoading, setIsLoading] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(getCurrentUser());
 
+  // Ottimizzazione: listener unico per cloud sync status
   useEffect(() => {
     const unsubscribe = CloudService.addSyncStatusListener(() => {
       const newStatus = CloudService.getSyncStatus();
@@ -27,15 +28,17 @@ const CloudSync: React.FC<CloudSyncProps> = ({ onSyncStatusChange }) => {
     return unsubscribe;
   }, [onSyncStatusChange]);
 
-  const handleAuthChange = (user: User | null) => {
-    setCurrentUser(user);
-    // Aggiorna lo stato del sync quando cambia l'autenticazione
-    const newStatus = CloudService.getSyncStatus();
-    setSyncStatus(newStatus);
-    onSyncStatusChange?.(newStatus);
-  };
+  // Ottimizzazione: aggiorna sync status quando cambia l'utente
+  const handleAuthChange = useCallback(
+    (user: User | null) => {
+      const newStatus = CloudService.getSyncStatus();
+      setSyncStatus(newStatus);
+      onSyncStatusChange?.(newStatus);
+    },
+    [onSyncStatusChange]
+  );
 
-  const toggleCloudSync = async () => {
+  const toggleCloudSync = useCallback(async () => {
     if (!currentUser) {
       console.warn('⚠️ Autenticazione richiesta per attivare cloud sync');
       return;
@@ -49,13 +52,16 @@ const CloudSync: React.FC<CloudSyncProps> = ({ onSyncStatusChange }) => {
       } else {
         const success = await CloudService.enableCloudSync();
         if (success) {
-          // Backup delle squadre locali esistenti
+          // Backup delle squadre locali esistenti (non bloccante)
           const localTeams = TeamCodeService.getAllTeams();
           if (localTeams.length > 0) {
             console.log(
               `📤 Backup di ${localTeams.length} squadre nel cloud...`
             );
-            await CloudService.backupAllTeams(localTeams);
+            // Esegui backup in background
+            CloudService.backupAllTeams(localTeams).catch((err) =>
+              console.error('❌ Errore backup:', err)
+            );
           }
         }
       }
@@ -64,9 +70,9 @@ const CloudSync: React.FC<CloudSyncProps> = ({ onSyncStatusChange }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentUser, syncStatus.isEnabled]);
 
-  const syncAllTeams = async () => {
+  const syncAllTeams = useCallback(async () => {
     if (!syncStatus.isEnabled) return;
 
     setIsLoading(true);
@@ -79,7 +85,7 @@ const CloudSync: React.FC<CloudSyncProps> = ({ onSyncStatusChange }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [syncStatus.isEnabled]);
 
   return (
     <div className='space-y-4'>

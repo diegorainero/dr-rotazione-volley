@@ -1,12 +1,11 @@
 // src/config/firebase.ts
 import { initializeApp } from 'firebase/app';
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 import {
   getAuth,
   signInAnonymously,
   signInWithPopup,
   GoogleAuthProvider,
-  connectAuthEmulator,
   User,
 } from 'firebase/auth';
 
@@ -84,6 +83,12 @@ export const ensureAuth = async (
       return;
     }
 
+    // Timeout per evitare listener infiniti
+    const timeout = setTimeout(() => {
+      unsubscribe();
+      reject(new Error('Timeout autenticazione'));
+    }, 10000);
+
     // Listener per cambi di stato auth
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
@@ -91,6 +96,7 @@ export const ensureAuth = async (
           '🔐 Utente autenticato:',
           user.displayName || user.email || user.uid
         );
+        clearTimeout(timeout);
         unsubscribe();
         resolve(user.uid);
       }
@@ -106,6 +112,7 @@ export const ensureAuth = async (
       })
       .catch((error) => {
         console.error('❌ Errore autenticazione:', error);
+        clearTimeout(timeout);
         unsubscribe();
         reject(error);
       });

@@ -178,4 +178,19 @@ service cloud.firestore {
 
 ---
 
+## 🚀 Ottimizzazioni Performance
+
+L'app è ottimizzata per evitare problemi di memoria:
+
+- **🧠 Gestione Memoria**: Hook ottimizzati e cleanup automatico dei listener
+- **⚡ Debouncing**: Limitazione delle chiamate Firebase frequenti  
+- **🔄 Lazy Loading**: Componenti caricati solo quando necessari
+- **📱 Mobile First**: Ottimizzato per dispositivi con memoria limitata
+
+### 🛠️ Debug Performance
+Se riscontri problemi di memoria, usa questi componenti:
+- `AuthTest`: Debug dettagliato autenticazione
+- `AuthStatus`: Status leggero senza overhead
+- `Performance utils`: Monitor memoria e cleanup
+
 **💡 Nota:** L'app funziona perfettamente anche senza Firebase. La configurazione cloud è opzionale e aggiunge solo funzionalità di sincronizzazione universale.

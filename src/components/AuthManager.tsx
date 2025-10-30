@@ -2,13 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import {
-  auth,
   signInWithGoogle,
   signInAnonymous,
   signOut,
-  getCurrentUser,
   AuthType,
 } from '../config/firebase';
+import { useAuth } from '../hooks/useAuth';
 
 interface AuthManagerProps {
   onAuthChange?: (user: User | null) => void;
@@ -19,26 +18,27 @@ const AuthManager: React.FC<AuthManagerProps> = ({
   onAuthChange,
   preferredMethod = 'anonymous',
 }) => {
-  const [user, setUser] = useState<User | null>(getCurrentUser());
+  const {
+    user,
+    isLoading: authLoading,
+    error: authError,
+    clearError,
+    setAuthError,
+  } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
+  // Notifica cambi di autenticazione al parent
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
-      onAuthChange?.(user);
-    });
-
-    return unsubscribe;
-  }, [onAuthChange]);
+    onAuthChange?.(user);
+  }, [user, onAuthChange]);
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    setError(null);
+    clearError();
     try {
       await signInWithGoogle();
     } catch (error: any) {
-      setError(error.message);
+      setAuthError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -46,11 +46,11 @@ const AuthManager: React.FC<AuthManagerProps> = ({
 
   const handleAnonymousSignIn = async () => {
     setIsLoading(true);
-    setError(null);
+    clearError();
     try {
       await signInAnonymous();
     } catch (error: any) {
-      setError(error.message);
+      setAuthError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +61,7 @@ const AuthManager: React.FC<AuthManagerProps> = ({
     try {
       await signOut();
     } catch (error: any) {
-      setError(error.message);
+      setAuthError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -160,9 +160,9 @@ const AuthManager: React.FC<AuthManagerProps> = ({
         </div>
       )}
 
-      {error && (
+      {authError && (
         <div className='mt-3 text-red-600 text-sm bg-red-50 p-2 rounded'>
-          ⚠️ {error}
+          ⚠️ {authError}
         </div>
       )}
 
