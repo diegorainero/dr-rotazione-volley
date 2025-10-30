@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import {
   signInWithGoogle,
-  signInAnonymous,
   signOut,
   AuthType,
   getUnauthorizedDomainInstructions,
@@ -17,7 +16,7 @@ interface AuthManagerProps {
 
 const AuthManager: React.FC<AuthManagerProps> = ({
   onAuthChange,
-  preferredMethod = 'anonymous',
+  preferredMethod = 'google',
 }) => {
   const {
     user,
@@ -38,18 +37,6 @@ const AuthManager: React.FC<AuthManagerProps> = ({
     clearError();
     try {
       await signInWithGoogle();
-    } catch (error: any) {
-      setAuthError(error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAnonymousSignIn = async () => {
-    setIsLoading(true);
-    clearError();
-    try {
-      await signInAnonymous();
     } catch (error: any) {
       setAuthError(error.message);
     } finally {
@@ -87,19 +74,19 @@ const AuthManager: React.FC<AuthManagerProps> = ({
         <div className='space-y-3'>
           <div className='bg-green-50 border border-green-200 rounded-lg p-3'>
             <div className='flex items-center gap-2 mb-2'>
-              {isAnonymous ? '👤' : '👨‍💻'}
+              ‍💻
               <span className='font-medium text-green-800'>
-                {isAnonymous ? 'Utente Anonimo' : 'Utente Google'}
+                Utente Google Autenticato
               </span>
             </div>
 
-            {!isAnonymous && user.displayName && (
+            {user.displayName && (
               <div className='text-sm text-green-700'>
                 Nome: {user.displayName}
               </div>
             )}
 
-            {!isAnonymous && user.email && (
+            {user.email && (
               <div className='text-sm text-green-700'>Email: {user.email}</div>
             )}
 
@@ -108,30 +95,18 @@ const AuthManager: React.FC<AuthManagerProps> = ({
             </div>
           </div>
 
-          <div className='flex gap-2'>
-            {isAnonymous && (
-              <button
-                onClick={handleGoogleSignIn}
-                disabled={isLoading}
-                className='flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg font-medium hover:bg-blue-200 transition-colors disabled:opacity-50 text-sm'
-              >
-                {isLoading ? '⏳' : '🔗'} Collega Google
-              </button>
-            )}
-
-            <button
-              onClick={handleSignOut}
-              disabled={isLoading}
-              className='px-3 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 text-sm'
-            >
-              {isLoading ? '⏳' : '🚪'} Logout
-            </button>
-          </div>
+          <button
+            onClick={handleSignOut}
+            disabled={isLoading}
+            className='w-full px-3 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 text-sm'
+          >
+            {isLoading ? '⏳' : '🚪'} Logout
+          </button>
         </div>
       ) : (
         <div className='space-y-3'>
           <div className='text-sm text-gray-600 mb-3'>
-            Scegli come accedere al cloud sync:
+            Accedi con il tuo account Google per utilizzare l'app:
           </div>
 
           <button
@@ -142,22 +117,13 @@ const AuthManager: React.FC<AuthManagerProps> = ({
             {isLoading ? '⏳' : '🔗'} Accedi con Google
           </button>
 
-          <div className='relative'>
-            <div className='absolute inset-0 flex items-center'>
-              <div className='w-full border-t border-gray-300'></div>
-            </div>
-            <div className='relative flex justify-center text-xs'>
-              <span className='bg-white px-2 text-gray-500'>oppure</span>
-            </div>
+          <div className='mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg'>
+            <p className='text-xs text-yellow-700'>
+              <strong>📋 Nota:</strong> L'accesso è obbligatorio per utilizzare
+              l'app. I tuoi dati saranno associati al tuo account Google per la
+              sicurezza.
+            </p>
           </div>
-
-          <button
-            onClick={handleAnonymousSignIn}
-            disabled={isLoading}
-            className='w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2'
-          >
-            {isLoading ? '⏳' : '👤'} Accesso Anonimo
-          </button>
         </div>
       )}
 
