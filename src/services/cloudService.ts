@@ -13,7 +13,7 @@ import {
   enableNetwork,
   disableNetwork,
 } from 'firebase/firestore';
-import { db, ensureAuth } from '../config/firebase';
+import { db } from '../config/firebase';
 import { TeamData } from './teamCodeService';
 
 export interface CloudTeamData extends TeamData {
@@ -51,8 +51,15 @@ export class CloudService {
         return false;
       }
 
-      // Tenta una connessione di test
-      await ensureAuth();
+      // Verifica se c'è già un utente autenticato
+      const { getCurrentUser } = await import('../config/firebase');
+      if (getCurrentUser()) {
+        this.isFirebaseConfigured = true;
+        this.configError = null;
+        return true;
+      }
+
+      // Se non c'è utente, il sync sarà disponibile ma richiederà autenticazione
       this.isFirebaseConfigured = true;
       this.configError = null;
       return true;
@@ -76,9 +83,24 @@ export class CloudService {
     }
 
     try {
+      // Verifica che ci sia un utente autenticato
+      const { getCurrentUser } = await import('../config/firebase');
+      const user = getCurrentUser();
+
+      if (!user) {
+        this.configError = 'Autenticazione richiesta per il cloud sync';
+        console.warn('☁️ Cloud sync richiede autenticazione');
+        this.notifyListeners();
+        return false;
+      }
+
       await enableNetwork(db);
       this.syncEnabled = true;
-      console.log('☁️ Cloud sync attivato');
+      this.configError = null;
+      console.log(
+        '☁️ Cloud sync attivato per:',
+        user.displayName || user.email || 'utente anonimo'
+      );
       this.notifyListeners();
       return true;
     } catch (error) {
@@ -109,7 +131,15 @@ export class CloudService {
     if (!this.syncEnabled || !this.isFirebaseConfigured) return null;
 
     try {
-      const userId = await ensureAuth();
+      const { getCurrentUser } = await import('../config/firebase');
+      const user = getCurrentUser();
+
+      if (!user) {
+        console.error('❌ Utente non autenticato per il salvataggio cloud');
+        return null;
+      }
+
+      const userId = user.uid;
       const cloudId = `${teamData.code}_${userId}`;
 
       const cloudTeam: CloudTeamData = {
@@ -142,7 +172,15 @@ export class CloudService {
     if (!this.isFirebaseConfigured) return null;
 
     try {
-      const userId = await ensureAuth();
+      const { getCurrentUser } = await import('../config/firebase');
+      const user = getCurrentUser();
+
+      if (!user) {
+        console.error('❌ Utente non autenticato per il caricamento cloud');
+        return null;
+      }
+
+      const userId = user.uid;
       const cloudId = `${teamCode}_${userId}`;
 
       const docRef = doc(db, 'teams', cloudId);
@@ -169,7 +207,15 @@ export class CloudService {
     if (!this.syncEnabled) return [];
 
     try {
-      const userId = await ensureAuth();
+      const { getCurrentUser } = await import('../config/firebase');
+      const user = getCurrentUser();
+
+      if (!user) {
+        console.error('❌ Utente non autenticato per il caricamento squadre');
+        return [];
+      }
+
+      const userId = user.uid;
       const q = query(
         collection(db, 'teams'),
         where('userId', '==', userId),
@@ -223,7 +269,15 @@ export class CloudService {
    */
   static async makeTeamPublic(teamCode: string): Promise<boolean> {
     try {
-      const userId = await ensureAuth();
+      const { getCurrentUser } = await import('../config/firebase');
+      const user = getCurrentUser();
+
+      if (!user) {
+        console.error('❌ Utente non autenticato per rendere team pubblico');
+        return false;
+      }
+
+      const userId = user.uid;
       const cloudId = `${teamCode}_${userId}`;
 
       await setDoc(

@@ -16,6 +16,24 @@ L'app **DR Rotazioni Volley** funziona perfettamente in modalità locale senza b
 - 🔗 Condivisione semplificata tramite codici
 - 📱 Funziona offline con sync al riconnettarsi
 
+### 🔐 Metodi di Autenticazione
+
+**🔗 Google Sign-in (Raccomandato):**
+- ✅ Account persistente e riconoscibile
+- ✅ Sincronizzazione universale tra dispositivi
+- ✅ Backup sicuro delle squadre
+- ✅ Condivisione con nome utente visibile
+- ✅ Recupero dati se si cambia dispositivo
+
+**👤 Accesso Anonimo:**
+- ✅ Veloce, nessun dato personale richiesto  
+- ✅ Funziona immediatamente
+- ⚠️ Account legato al dispositivo
+- ⚠️ Dati persi se si cancella il browser
+- ⚠️ Non recuperabile su altri dispositivi
+
+**💡 Consiglio:** Inizia con accesso anonimo per testare, poi collega Google per la sincronizzazione completa.
+
 ---
 
 ## 🛠️ Setup Firebase (Opzionale)
@@ -40,8 +58,18 @@ L'app **DR Rotazioni Volley** funziona perfettamente in modalità locale senza b
 1. Nel menu laterale, vai su **"Authentication"**
 2. Clicca **"Inizia"**
 3. Vai su tab **"Sign-in method"**
-4. Abilita **"Accesso anonimo"** (scorri in basso)
-5. Clicca su **"Accesso anonimo"** → **"Abilita"** → **"Salva"**
+
+#### Per Google Sign-in (Raccomandato):
+4. Clicca su **"Google"** 
+5. Clicca **"Abilita"**
+6. Inserisci email di supporto del progetto
+7. Clicca **"Salva"**
+
+#### Per accesso anonimo (opzionale):
+8. Scorri in basso e trova **"Accesso anonimo"**
+9. Clicca su **"Accesso anonimo"** → **"Abilita"** → **"Salva"**
+
+**Nota:** Puoi abilitare entrambi i metodi per dare più opzioni agli utenti.
 
 ### 4. Ottieni la configurazione
 
@@ -119,9 +147,21 @@ service cloud.firestore {
       allow read, write: if request.auth != null && 
         (resource == null || resource.data.userId == request.auth.uid);
     }
+    
+    // Permetti lettura di squadre pubbliche a utenti autenticati
+    match /teams/{teamId} {
+      allow read: if request.auth != null && 
+        resource.data.isPublic == true;
+    }
   }
 }
 ```
+
+### 🔒 Spiegazione Regole:
+- **Accesso privato**: Solo il creatore può leggere/modificare le sue squadre
+- **Squadre pubbliche**: Tutti gli utenti autenticati possono leggere squadre pubbliche  
+- **Autenticazione obbligatoria**: Sia Google che utenti anonimi devono essere autenticati
+- **Nessun accesso anonimo al database**: Prevenzione spam e abusi
 
 ---
 
