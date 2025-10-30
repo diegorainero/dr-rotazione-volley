@@ -71,6 +71,19 @@ export class CloudService {
   }
 
   /**
+   * Verifica e abilita automaticamente il cloud sync se possibile
+   */
+  static async autoEnableCloudSync(): Promise<boolean> {
+    // Se già abilitato, non fare nulla
+    if (this.syncEnabled && this.isFirebaseConfigured) {
+      return true;
+    }
+
+    console.log('🔍 Auto-enable cloud sync check...');
+    return this.enableCloudSync();
+  }
+
+  /**
    * Attiva il sync cloud per l'utente
    */
   static async enableCloudSync(): Promise<boolean> {

@@ -4,6 +4,7 @@ import { User } from 'firebase/auth';
 import { CloudService, CloudSyncStatus } from '../services/cloudService';
 import { TeamCodeService } from '../services/teamCodeService';
 import AuthManager from './AuthManager';
+import FirebaseConfigHelper from './FirebaseConfigHelper';
 import { useAuth } from '../hooks/useAuth';
 
 interface CloudSyncProps {
@@ -89,6 +90,9 @@ const CloudSync: React.FC<CloudSyncProps> = ({ onSyncStatusChange }) => {
 
   return (
     <div className='space-y-4'>
+      {/* Helper per configurazione Firebase */}
+      <FirebaseConfigHelper />
+
       {/* Componente di Autenticazione */}
       <AuthManager onAuthChange={handleAuthChange} />
 

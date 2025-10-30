@@ -9,6 +9,7 @@ interface PlayerProps {
   draggable?: boolean;
   scale?: number;
   onDragEnd?: (pos: { x: number; y: number }) => void;
+  onClick?: () => void;
 }
 
 const Player: React.FC<PlayerProps> = ({
@@ -19,10 +20,11 @@ const Player: React.FC<PlayerProps> = ({
   draggable = true,
   scale = 1,
   onDragEnd,
+  onClick,
 }) => {
   const radius = Math.max(15, 25 * scale); // Raggio minimo per mobile
   const fontSize = Math.max(10, 16 * scale); // Font size minimo per mobile
-  
+
   return (
     <Group
       x={x}
@@ -31,6 +33,7 @@ const Player: React.FC<PlayerProps> = ({
       onDragEnd={(e: any) =>
         onDragEnd && onDragEnd({ x: e.target.x(), y: e.target.y() })
       }
+      onClick={onClick}
     >
       <Circle radius={radius} fill={color} />
       <Text

@@ -29,7 +29,10 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d build",
+    "firebase:build": "npm run build",
+    "firebase:deploy": "firebase deploy --only hosting",
+    "firebase:deploy:full": "npm run firebase:build && npm run firebase:deploy"
   },
   "eslintConfig": {
     "extends": [
