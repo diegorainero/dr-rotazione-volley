@@ -33,7 +33,11 @@ const DebugTeamLoading: React.FC<DebugTeamLoadingProps> = ({ onClose }) => {
         if (result.success && result.team) {
           logs.push(`✅ Team locale trovato: ${result.team.name}`);
         } else {
-          logs.push(`❌ Team locale NON trovato per codice ${teamCode}: ${result.error || 'Unknown error'}`);
+          logs.push(
+            `❌ Team locale NON trovato per codice ${teamCode}: ${
+              result.error || 'Unknown error'
+            }`
+          );
         }
       } catch (error) {
         logs.push(`❌ Errore caricamento team: ${error}`);
@@ -70,37 +74,35 @@ const DebugTeamLoading: React.FC<DebugTeamLoadingProps> = ({ onClose }) => {
   }, []);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
-        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-gray-900">
+    <div className='fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4'>
+      <div className='bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden'>
+        <div className='p-4 border-b border-gray-200 flex justify-between items-center'>
+          <h2 className='text-lg font-bold text-gray-900'>
             🔍 Debug Team Loading
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-xl"
+            className='text-gray-500 hover:text-gray-700 text-xl'
           >
             ×
           </button>
         </div>
-        
-        <div className="p-4 overflow-y-auto max-h-96">
-          <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm">
+
+        <div className='p-4 overflow-y-auto max-h-96'>
+          <div className='bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm'>
             {debugInfo.map((line, index) => (
-              <div key={index} className="whitespace-pre-wrap">
+              <div key={index} className='whitespace-pre-wrap'>
                 {line}
               </div>
             ))}
-            {debugInfo.length === 0 && (
-              <div>⏳ Caricamento debug info...</div>
-            )}
+            {debugInfo.length === 0 && <div>⏳ Caricamento debug info...</div>}
           </div>
         </div>
-        
-        <div className="p-4 border-t border-gray-200">
+
+        <div className='p-4 border-t border-gray-200'>
           <button
             onClick={onClose}
-            className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className='w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600'
           >
             Chiudi Debug
           </button>

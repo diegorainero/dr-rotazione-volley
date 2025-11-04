@@ -127,7 +127,10 @@ const VolleyballCourt: React.FC = () => {
           setCurrentTeam(result.team);
           return;
         } else {
-          console.log('❌ Team con codice non trovato localmente:', result.error);
+          console.log(
+            '❌ Team con codice non trovato localmente:',
+            result.error
+          );
         }
       } catch (error) {
         console.log('❌ Errore caricamento team da URL:', error);
@@ -165,37 +168,40 @@ const VolleyballCourt: React.FC = () => {
       // Se richiesto, attendi che l'autenticazione sia stabilita
       if (waitForAuth) {
         AuthLogger.log('Iniziato caricamento con attesa autenticazione');
-        await new Promise(resolve => {
+        await new Promise((resolve) => {
           let attempts = 0;
           const checkAuth = () => {
             attempts++;
             const { getCurrentUser } = require('../config/firebase');
             const user = getCurrentUser();
-            
+
             // Considera "stabile" quando:
             // 1. C'è un utente autenticato (Google o anonimo)
             // 2. O dopo un timeout di sicurezza (3 secondi)
             if (user !== null) {
-              AuthLogger.log('Autenticazione stabilita', { 
-                uid: user.uid, 
+              AuthLogger.log('Autenticazione stabilita', {
+                uid: user.uid,
                 isAnonymous: user.isAnonymous,
                 email: user.email,
-                attempts 
+                attempts,
               });
               resolve(true);
             } else {
-              if (attempts % 10 === 0) { // Log ogni secondo (10 attempts * 100ms)
+              if (attempts % 10 === 0) {
+                // Log ogni secondo (10 attempts * 100ms)
                 AuthLogger.log(`Attesa autenticazione - tentativo ${attempts}`);
               }
               setTimeout(checkAuth, 100); // Riprova ogni 100ms
             }
           };
-          
+
           checkAuth();
-          
+
           // Timeout di sicurezza - procedi comunque dopo 3 secondi
           setTimeout(() => {
-            AuthLogger.log('Timeout autenticazione raggiunto - procedo con caricamento locale');
+            AuthLogger.log(
+              'Timeout autenticazione raggiunto - procedo con caricamento locale'
+            );
             resolve(true);
           }, 3000);
         });
@@ -208,14 +214,19 @@ const VolleyballCourt: React.FC = () => {
       console.log('📊 Conteggio rotazioni nel DB:', rotationsCount);
 
       // Usa il nuovo metodo che include automaticamente il cloud
-      const formations = await FormationService.getGroupedFormationsWithAutoCloud();
-      
+      const formations =
+        await FormationService.getGroupedFormationsWithAutoCloud();
+
       // Estrai i nomi delle squadre dalle formazioni già caricate (evita doppio caricamento)
       const teamNamesSet = new Set<string>();
-      formations.forEach(f => teamNamesSet.add(f.teamName));
+      formations.forEach((f) => teamNamesSet.add(f.teamName));
       const teams = Array.from(teamNamesSet).sort();
 
-      console.log('📊 Formazioni raggruppate caricate:', formations.length, formations);
+      console.log(
+        '📊 Formazioni raggruppate caricate:',
+        formations.length,
+        formations
+      );
       console.log('🏐 Squadre trovate:', teams.length, teams);
 
       setSavedFormations(formations);
@@ -905,7 +916,7 @@ const VolleyballCourt: React.FC = () => {
         role: p.role,
         name: p.name,
       }));
-      
+
       const awayPositions = awayTeam.map((p) => ({
         zone: p.zone,
         x: p.x,
@@ -983,8 +994,12 @@ const VolleyballCourt: React.FC = () => {
         })
       );
 
-      const sourceText = formation.hasLocal && formation.hasCloud ? '💾☁️ locale+cloud' :
-                         formation.hasCloud ? '☁️ cloud' : '💾 locale';
+      const sourceText =
+        formation.hasLocal && formation.hasCloud
+          ? '💾☁️ locale+cloud'
+          : formation.hasCloud
+          ? '☁️ cloud'
+          : '💾 locale';
       alert(
         `✅ Formazione "${formation.name}" caricata con successo da ${sourceText}!\n\nLa squadra "${formation.teamName}" è ora posizionata sul campo.`
       );
@@ -1001,7 +1016,7 @@ const VolleyballCourt: React.FC = () => {
     const sources = [];
     if (formation.hasLocal) sources.push('💾 Locale');
     if (formation.hasCloud) sources.push('☁️ Cloud');
-    
+
     if (
       window.confirm(
         `Sei sicuro di voler eliminare la formazione "${
@@ -1609,20 +1624,24 @@ const VolleyballCourt: React.FC = () => {
                 const { getCurrentUser } = require('../config/firebase');
                 const user = getCurrentUser();
                 const isGoogleAuth = user && !user.isAnonymous;
-                
+
                 return (
-                  <div className={`rounded p-2 mb-3 text-sm ${
-                    isGoogleAuth 
-                      ? 'bg-blue-100 border border-blue-300' 
-                      : 'bg-orange-100 border border-orange-300'
-                  }`}>
+                  <div
+                    className={`rounded p-2 mb-3 text-sm ${
+                      isGoogleAuth
+                        ? 'bg-blue-100 border border-blue-300'
+                        : 'bg-orange-100 border border-orange-300'
+                    }`}
+                  >
                     {isGoogleAuth ? (
                       <p className='text-blue-800'>
-                        ☁️ <strong>Cloud attivo:</strong> Formazioni locali e cloud visibili
+                        ☁️ <strong>Cloud attivo:</strong> Formazioni locali e
+                        cloud visibili
                       </p>
                     ) : (
                       <p className='text-orange-800'>
-                        📱 <strong>Solo locale:</strong> Effettua il login Google (in alto) per vedere le formazioni cloud
+                        📱 <strong>Solo locale:</strong> Effettua il login
+                        Google (in alto) per vedere le formazioni cloud
                       </p>
                     )}
                   </div>
@@ -1632,7 +1651,8 @@ const VolleyballCourt: React.FC = () => {
                 return (
                   <div className='rounded p-2 mb-3 text-sm bg-gray-100 border border-gray-300'>
                     <p className='text-gray-600'>
-                      ⏳ <strong>Inizializzazione:</strong> Controllo status cloud...
+                      ⏳ <strong>Inizializzazione:</strong> Controllo status
+                      cloud...
                     </p>
                   </div>
                 );
@@ -1661,9 +1681,8 @@ const VolleyballCourt: React.FC = () => {
                       <strong>Squadre diverse:</strong> {teamNames.length}
                     </p>
                     <p className='text-xs text-gray-500 mt-1'>
-                      {savedFormations.filter((f) => f.hasCloud).length}{' '}
-                      nel cloud,{' '}
-                      {savedFormations.filter((f) => f.hasLocal).length}{' '}
+                      {savedFormations.filter((f) => f.hasCloud).length} nel
+                      cloud, {savedFormations.filter((f) => f.hasLocal).length}{' '}
                       locali
                     </p>
                   </div>
@@ -1706,11 +1725,15 @@ const VolleyballCourt: React.FC = () => {
                       onClick={async () => {
                         try {
                           setLoading(true);
-                          console.log('🔄 Avvio sincronizzazione bidirezionale...');
-                          
-                          const result = await FormationService.syncBidirectional();
-                          
-                          let message = '✅ Sincronizzazione bidirezionale completata!\n\n';
+                          console.log(
+                            '🔄 Avvio sincronizzazione bidirezionale...'
+                          );
+
+                          const result =
+                            await FormationService.syncBidirectional();
+
+                          let message =
+                            '✅ Sincronizzazione bidirezionale completata!\n\n';
                           message += `📤 Locale → Cloud: ${result.localToCloud.synced} sincronizzate`;
                           if (result.localToCloud.failed > 0) {
                             message += `, ${result.localToCloud.failed} errori`;
@@ -1719,21 +1742,32 @@ const VolleyballCourt: React.FC = () => {
                           if (result.cloudToLocal.failed > 0) {
                             message += `, ${result.cloudToLocal.failed} errori`;
                           }
-                          
-                          if (result.localToCloud.errors.length > 0 || result.cloudToLocal.errors.length > 0) {
+
+                          if (
+                            result.localToCloud.errors.length > 0 ||
+                            result.cloudToLocal.errors.length > 0
+                          ) {
                             message += '\n\n⚠️ Errori:\n';
-                            [...result.localToCloud.errors, ...result.cloudToLocal.errors]
+                            [
+                              ...result.localToCloud.errors,
+                              ...result.cloudToLocal.errors,
+                            ]
                               .slice(0, 3)
-                              .forEach(err => message += `• ${err}\n`);
+                              .forEach((err) => (message += `• ${err}\n`));
                           }
-                          
+
                           alert(message);
-                          
+
                           // Ricarica formazioni per mostrare i nuovi dati
                           await loadFormations();
                         } catch (error) {
-                          console.error('❌ Errore sincronizzazione bidirezionale:', error);
-                          alert(`❌ Errore sincronizzazione bidirezionale: ${error}`);
+                          console.error(
+                            '❌ Errore sincronizzazione bidirezionale:',
+                            error
+                          );
+                          alert(
+                            `❌ Errore sincronizzazione bidirezionale: ${error}`
+                          );
                         } finally {
                           setLoading(false);
                         }
@@ -1808,14 +1842,14 @@ const VolleyballCourt: React.FC = () => {
                               <p className='font-medium text-sm'>
                                 {formation.name}
                               </p>
-                              <div className="flex gap-1">
+                              <div className='flex gap-1'>
                                 {formation.hasLocal && (
-                                  <span className="text-xs px-1 py-0.5 rounded bg-gray-100 text-gray-600">
+                                  <span className='text-xs px-1 py-0.5 rounded bg-gray-100 text-gray-600'>
                                     💾
                                   </span>
                                 )}
                                 {formation.hasCloud && (
-                                  <span className="text-xs px-1 py-0.5 rounded bg-blue-100 text-blue-700">
+                                  <span className='text-xs px-1 py-0.5 rounded bg-blue-100 text-blue-700'>
                                     ☁️
                                   </span>
                                 )}
@@ -2071,14 +2105,14 @@ const VolleyballCourt: React.FC = () => {
                                 <h5 className='font-medium text-gray-800'>
                                   {formation.name}
                                 </h5>
-                                <div className="flex gap-1">
+                                <div className='flex gap-1'>
                                   {formation.hasLocal && (
-                                    <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                                    <span className='text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600'>
                                       💾 Locale
                                     </span>
                                   )}
                                   {formation.hasCloud && (
-                                    <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                                    <span className='text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800'>
                                       ☁️ Cloud
                                     </span>
                                   )}

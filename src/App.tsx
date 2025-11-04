@@ -69,7 +69,7 @@ function App() {
     <div className='min-h-screen flex flex-col items-center justify-center bg-green-100'>
       {/* Auth Status Indicator - solo in development */}
       {process.env.NODE_ENV === 'development' && <AuthStatusIndicator />}
-      
+
       <div className='flex items-center gap-4 mb-4'>
         <h1 className='text-2xl font-bold'>Analizzatore Rotazioni Pallavolo</h1>
         <CloudStatus onOpenMigration={() => setShowMigrationPanel(true)} />

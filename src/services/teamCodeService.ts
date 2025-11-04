@@ -81,10 +81,15 @@ export class TeamCodeService {
   /**
    * Carica i dati di una squadra tramite codice (con sync cloud opzionale)
    */
-  static async loadTeam(teamCode: string): Promise<{ success: boolean; team?: any; error?: string }> {
+  static async loadTeam(
+    teamCode: string
+  ): Promise<{ success: boolean; team?: any; error?: string }> {
     console.log('🆔 TeamCodeService.loadTeam v2.0 - Cache refresh verificato');
-    console.log('🔍 TeamCodeService.loadTeam - Inizio caricamento per codice:', teamCode);
-    
+    console.log(
+      '🔍 TeamCodeService.loadTeam - Inizio caricamento per codice:',
+      teamCode
+    );
+
     if (!teamCode?.trim()) {
       console.log('❌ TeamCodeService.loadTeam - Codice team vuoto');
       return { success: false, error: 'Codice team non valido' };
@@ -96,11 +101,17 @@ export class TeamCodeService {
       await AuthWaiter.waitForAuth(10); // 10 secondi di timeout
       console.log('✅ TeamCodeService.loadTeam - Autenticazione confermata');
 
-      console.log('🔍 TeamCodeService.loadTeam - Cerco team nel cloud:', teamCode);
+      console.log(
+        '🔍 TeamCodeService.loadTeam - Cerco team nel cloud:',
+        teamCode
+      );
       const cloudResult = await CloudService.findPublicTeam(teamCode);
-      
+
       if (cloudResult) {
-        console.log('✅ TeamCodeService.loadTeam - Team trovato nel cloud:', cloudResult.name);
+        console.log(
+          '✅ TeamCodeService.loadTeam - Team trovato nel cloud:',
+          cloudResult.name
+        );
         return { success: true, team: cloudResult };
       } else {
         console.log('⚠️ TeamCodeService.loadTeam - Team non trovato nel cloud');
@@ -108,7 +119,10 @@ export class TeamCodeService {
       }
     } catch (error) {
       console.error('❌ TeamCodeService.loadTeam - Errore:', error);
-      return { success: false, error: 'Errore durante il caricamento del team' };
+      return {
+        success: false,
+        error: 'Errore durante il caricamento del team',
+      };
     }
   }
 
@@ -286,7 +300,7 @@ export class TeamCodeService {
   static async exportTeamData(code: string): Promise<string | null> {
     const result = await this.loadTeam(code);
     if (!result.success || !result.team) return null;
-    
+
     const team = result.team;
 
     // Raccogli tutti i dati correlati alla squadra

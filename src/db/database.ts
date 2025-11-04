@@ -132,8 +132,20 @@ export const rotationsService = {
   async save(
     name: string,
     teamName: string,
-    homePositions: { zone: number; x: number; y: number; role: string; name?: string }[],
-    awayPositions: { zone: number; x: number; y: number; role: string; name?: string }[],
+    homePositions: {
+      zone: number;
+      x: number;
+      y: number;
+      role: string;
+      name?: string;
+    }[],
+    awayPositions: {
+      zone: number;
+      x: number;
+      y: number;
+      role: string;
+      name?: string;
+    }[],
     description?: string
   ): Promise<void> {
     const now = new Date();

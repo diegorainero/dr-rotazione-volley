@@ -255,12 +255,14 @@ export class CloudService {
    * Cerca squadre pubbliche per codice (condivisione universale)
    */
   static async findPublicTeam(teamCode: string): Promise<CloudTeamData | null> {
-    console.log('🆔 CloudService.findPublicTeam v2.0 - Cache refresh verificato');
+    console.log(
+      '🆔 CloudService.findPublicTeam v2.0 - Cache refresh verificato'
+    );
     try {
       // Verifica che l'utente sia autenticato prima di fare query
       const { getCurrentUser } = await import('../config/firebase');
       const user = getCurrentUser();
-      
+
       if (!user) {
         console.log('ℹ️ Utente non autenticato - skip ricerca team pubblici');
         return null;
@@ -286,7 +288,10 @@ export class CloudService {
       if (error?.code === 'permission-denied') {
         console.log('ℹ️ Ricerca team pubblici non disponibile (permessi)');
       } else {
-        console.warn('⚠️ Errore ricerca team pubblico:', error?.message || error);
+        console.warn(
+          '⚠️ Errore ricerca team pubblico:',
+          error?.message || error
+        );
       }
       return null;
     }

@@ -15,7 +15,7 @@ export const useFirebaseAuth = (): AuthState => {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     isLoading: true,
-    isReady: false
+    isReady: false,
   });
 
   useEffect(() => {
@@ -24,28 +24,27 @@ export const useFirebaseAuth = (): AuthState => {
     const initializeAuth = async () => {
       try {
         const { auth } = await import('../config/firebase');
-        
+
         // Listener per cambiamenti di autenticazione
         unsubscribe = auth.onAuthStateChanged((user) => {
           console.log('🔐 Auth state changed:', {
             uid: user?.uid || null,
             isAnonymous: user?.isAnonymous,
-            email: user?.email
+            email: user?.email,
           });
-          
+
           setAuthState({
             user,
             isLoading: false,
-            isReady: true
+            isReady: true,
           });
         });
-
       } catch (error) {
         console.error('❌ Errore inizializzazione auth listener:', error);
         setAuthState({
           user: null,
           isLoading: false,
-          isReady: true
+          isReady: true,
         });
       }
     };
@@ -69,11 +68,12 @@ export const useFirebaseAuth = (): AuthState => {
 export const waitForAuthReady = (): Promise<any> => {
   return new Promise((resolve) => {
     const { getCurrentUser } = require('../config/firebase');
-    
+
     const checkAuth = () => {
       try {
         const user = getCurrentUser();
-        if (user !== null || user === null) { // Considera pronto anche se null
+        if (user !== null || user === null) {
+          // Considera pronto anche se null
           resolve(user);
         } else {
           setTimeout(checkAuth, 50);
@@ -83,9 +83,9 @@ export const waitForAuthReady = (): Promise<any> => {
         resolve(null);
       }
     };
-    
+
     checkAuth();
-    
+
     // Timeout di sicurezza
     setTimeout(() => resolve(null), 2000);
   });

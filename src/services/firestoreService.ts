@@ -401,12 +401,12 @@ export class FirestoreService {
             y: pos.y,
             role: pos.role,
           };
-          
+
           // Aggiungi name solo se è presente e non vuoto
           if (pos.name && pos.name.trim() !== '') {
             cleanPos.name = pos.name.trim();
           }
-          
+
           return cleanPos;
         });
       };
@@ -452,13 +452,15 @@ export class FirestoreService {
 
   /**
    * Ottiene tutte le formazioni dell'utente
-   * 
+   *
    * NOTA: Per performance ottimali in produzione, creare l'indice composto:
    * Collection: formations
    * Fields: userId (Ascending), createdAt (Descending)
    * URL: https://console.firebase.google.com/project/dr-rotazioni-volley/firestore/indexes
    */
-  static async getUserFormations(forceRefresh: boolean = false): Promise<FormationData[]> {
+  static async getUserFormations(
+    forceRefresh: boolean = false
+  ): Promise<FormationData[]> {
     try {
       const userId = this.getCurrentUserId();
       // Rimuovo l'orderBy per evitare il problema dell'indice composto
@@ -469,10 +471,10 @@ export class FirestoreService {
       );
 
       // Usa getDocsFromServer per forzare refresh dal server se richiesto
-      const querySnapshot = forceRefresh ? 
-        await getDocsFromServer(q) : 
-        await getDocs(q);
-      
+      const querySnapshot = forceRefresh
+        ? await getDocsFromServer(q)
+        : await getDocs(q);
+
       const formations: FormationData[] = [];
 
       querySnapshot.forEach((doc) => {
@@ -480,15 +482,25 @@ export class FirestoreService {
       });
 
       if (forceRefresh) {
-        console.log(`🔄 Formazioni caricate dal SERVER (cache bypassed): ${formations.length}`);
+        console.log(
+          `🔄 Formazioni caricate dal SERVER (cache bypassed): ${formations.length}`
+        );
       } else {
         console.log(`📋 Formazioni caricate (con cache): ${formations.length}`);
       }
 
       // Ordina in memoria per data di creazione discendente
       formations.sort((a, b) => {
-        const dateA = new Date(typeof a.createdAt === 'string' ? a.createdAt : a.createdAt.toDate?.() || new Date());
-        const dateB = new Date(typeof b.createdAt === 'string' ? b.createdAt : b.createdAt.toDate?.() || new Date());
+        const dateA = new Date(
+          typeof a.createdAt === 'string'
+            ? a.createdAt
+            : a.createdAt.toDate?.() || new Date()
+        );
+        const dateB = new Date(
+          typeof b.createdAt === 'string'
+            ? b.createdAt
+            : b.createdAt.toDate?.() || new Date()
+        );
         return dateB.getTime() - dateA.getTime();
       });
 
@@ -505,8 +517,10 @@ export class FirestoreService {
   static async deleteFormation(formationId: string): Promise<void> {
     try {
       const userId = this.getCurrentUserId();
-      console.log(`🔍 Debug delete: userId=${userId}, formationId=${formationId}`);
-      
+      console.log(
+        `🔍 Debug delete: userId=${userId}, formationId=${formationId}`
+      );
+
       const docRef = doc(db, this.COLLECTIONS.FORMATIONS, formationId);
 
       // Verifica proprietà
@@ -517,10 +531,14 @@ export class FirestoreService {
       }
 
       const data = docSnap.data() as FormationData;
-      console.log(`🔍 Debug: data.userId=${data.userId}, current.userId=${userId}`);
-      
+      console.log(
+        `🔍 Debug: data.userId=${data.userId}, current.userId=${userId}`
+      );
+
       if (data.userId !== userId) {
-        console.error(`❌ Permessi negati: formazione appartiene a ${data.userId}, utente corrente: ${userId}`);
+        console.error(
+          `❌ Permessi negati: formazione appartiene a ${data.userId}, utente corrente: ${userId}`
+        );
         throw new Error('Non hai i permessi per eliminare questa formazione');
       }
 
@@ -553,12 +571,12 @@ export class FirestoreService {
             y: pos.y,
             role: pos.role,
           };
-          
+
           // Aggiungi name solo se è presente e non vuoto
           if (pos.name && pos.name.trim() !== '') {
             cleanPos.name = pos.name.trim();
           }
-          
+
           return cleanPos;
         });
       };
@@ -566,11 +584,11 @@ export class FirestoreService {
       // Verifica che la formazione esista e appartenga all'utente
       const docRef = doc(db, this.COLLECTIONS.FORMATIONS, formationId);
       const docSnap = await getDoc(docRef);
-      
+
       if (!docSnap.exists()) {
         throw new Error('Formazione non trovata');
       }
-      
+
       const existingData = docSnap.data() as FormationData;
       if (existingData.userId !== userId) {
         throw new Error('Non hai i permessi per aggiornare questa formazione');
