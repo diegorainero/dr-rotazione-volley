@@ -29,11 +29,11 @@ const DebugTeamLoading: React.FC<DebugTeamLoadingProps> = ({ onClose }) => {
     if (teamCode) {
       logs.push(`🔗 Codice team dall'URL: ${teamCode}`);
       try {
-        const existingTeam = await TeamCodeService.loadTeam(teamCode);
-        if (existingTeam) {
-          logs.push(`✅ Team locale trovato: ${existingTeam.name}`);
+        const result = await TeamCodeService.loadTeam(teamCode);
+        if (result.success && result.team) {
+          logs.push(`✅ Team locale trovato: ${result.team.name}`);
         } else {
-          logs.push(`❌ Team locale NON trovato per codice ${teamCode}`);
+          logs.push(`❌ Team locale NON trovato per codice ${teamCode}: ${result.error || 'Unknown error'}`);
         }
       } catch (error) {
         logs.push(`❌ Errore caricamento team: ${error}`);

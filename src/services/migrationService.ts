@@ -91,12 +91,14 @@ export class MigrationService {
       }
 
       // Carica squadra locale
-      const localTeam = await TeamCodeService.loadTeam(teamCode);
-      if (!localTeam) {
-        console.log(`⚠️ Squadra ${teamCode} non trovata nel localStorage`);
+      const result = await TeamCodeService.loadTeam(teamCode);
+      if (!result.success || !result.team) {
+        console.log(`⚠️ Squadra ${teamCode} non trovata nel localStorage: ${result.error}`);
         return false;
       }
 
+      const localTeam = result.team;
+      
       // Converti e salva su Firestore
       const firestoreTeam: TeamDataInput = {
         code: localTeam.code,

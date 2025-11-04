@@ -4,6 +4,7 @@
  */
 
 import { CloudService } from './cloudService';
+import { AuthWaiter } from '../utils/authWaiter';
 
 export interface PlayerData {
   role: string;
@@ -80,50 +81,35 @@ export class TeamCodeService {
   /**
    * Carica i dati di una squadra tramite codice (con sync cloud opzionale)
    */
-  static async loadTeam(code: string): Promise<TeamData | null> {
-    // Prima prova a caricare dal locale
-    const localData = localStorage.getItem(`${this.STORAGE_PREFIX}${code}`);
-    let teamData: TeamData | null = null;
-
-    if (localData) {
-      try {
-        teamData = JSON.parse(localData);
-      } catch (error) {
-        console.error('❌ Errore parsing dati locali:', error);
-      }
+  static async loadTeam(teamCode: string): Promise<{ success: boolean; team?: any; error?: string }> {
+    console.log('🆔 TeamCodeService.loadTeam v2.0 - Cache refresh verificato');
+    console.log('🔍 TeamCodeService.loadTeam - Inizio caricamento per codice:', teamCode);
+    
+    if (!teamCode?.trim()) {
+      console.log('❌ TeamCodeService.loadTeam - Codice team vuoto');
+      return { success: false, error: 'Codice team non valido' };
     }
 
-    // Prova a sincronizzare con il cloud
     try {
-      const cloudTeam = await CloudService.loadTeamFromCloud(code);
-      if (cloudTeam) {
-        // Se abbiamo sia locale che cloud, usa il più recente
-        if (teamData) {
-          const localTime = new Date(teamData.lastUsed).getTime();
-          const cloudTime = new Date(cloudTeam.lastUsed).getTime();
-          teamData = cloudTime > localTime ? cloudTeam : teamData;
-        } else {
-          teamData = cloudTeam;
-        }
+      // Attendi che l'autenticazione sia pronta prima di procedere
+      console.log('⏳ TeamCodeService.loadTeam - Attendo autenticazione...');
+      await AuthWaiter.waitForAuth(10); // 10 secondi di timeout
+      console.log('✅ TeamCodeService.loadTeam - Autenticazione confermata');
+
+      console.log('🔍 TeamCodeService.loadTeam - Cerco team nel cloud:', teamCode);
+      const cloudResult = await CloudService.findPublicTeam(teamCode);
+      
+      if (cloudResult) {
+        console.log('✅ TeamCodeService.loadTeam - Team trovato nel cloud:', cloudResult.name);
+        return { success: true, team: cloudResult };
       } else {
-        // Se non c'è nel cloud, prova a cercare team pubblici
-        const publicTeam = await CloudService.findPublicTeam(code);
-        if (publicTeam) {
-          teamData = publicTeam;
-        }
+        console.log('⚠️ TeamCodeService.loadTeam - Team non trovato nel cloud');
+        return { success: false, error: 'Team non trovato' };
       }
     } catch (error) {
-      console.log('ℹ️ Cloud sync non disponibile, uso dati locali');
+      console.error('❌ TeamCodeService.loadTeam - Errore:', error);
+      return { success: false, error: 'Errore durante il caricamento del team' };
     }
-
-    if (!teamData) return null;
-
-    // Aggiorna ultimo utilizzo e salva
-    teamData.lastUsed = new Date().toISOString();
-    this.saveTeam(teamData);
-    this.setCurrentTeam(code);
-
-    return teamData;
   }
 
   /**
@@ -144,7 +130,8 @@ export class TeamCodeService {
     const currentCode = localStorage.getItem(this.CURRENT_TEAM_KEY);
     if (!currentCode) return null;
 
-    return this.loadTeam(currentCode);
+    const result = await this.loadTeam(currentCode);
+    return result.success ? result.team : null;
   }
 
   /**
@@ -283,9 +270,10 @@ export class TeamCodeService {
     formations?: number,
     receptions?: number
   ): Promise<void> {
-    const team = await this.loadTeam(code);
-    if (!team) return;
+    const result = await this.loadTeam(code);
+    if (!result.success || !result.team) return;
 
+    const team = result.team;
     if (formations !== undefined) team.formations = formations;
     if (receptions !== undefined) team.receptions = receptions;
 
@@ -295,9 +283,11 @@ export class TeamCodeService {
   /**
    * Esporta tutti i dati di una squadra
    */
-  static exportTeamData(code: string): string | null {
-    const team = this.loadTeam(code);
-    if (!team) return null;
+  static async exportTeamData(code: string): Promise<string | null> {
+    const result = await this.loadTeam(code);
+    if (!result.success || !result.team) return null;
+    
+    const team = result.team;
 
     // Raccogli tutti i dati correlati alla squadra
     const exportData = {

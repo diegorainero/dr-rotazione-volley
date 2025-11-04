@@ -44,12 +44,12 @@ const TeamManager: React.FC<TeamManagerProps> = ({
     if (!codeToUse) return;
 
     try {
-      const team = await TeamCodeService.loadTeam(codeToUse);
-      if (team) {
+      const result = await TeamCodeService.loadTeam(codeToUse);
+      if (result.success && result.team) {
         setJoinCode('');
         setShowJoinForm(false);
         loadTeams();
-        onTeamSelected(team);
+        onTeamSelected(result.team);
       } else {
         alert(
           `❌ Squadra con codice "${codeToUse}" non trovata.\n\n💡 Suggerimento: Usa il link di condivisione completo o il QR code per unirsi automaticamente alla squadra!`

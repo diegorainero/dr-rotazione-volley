@@ -9,7 +9,7 @@ import {
 } from '../db/database';
 import {
   FormationService,
-  UnifiedFormation,
+  GroupedFormation,
 } from '../services/formationService';
 import { CloudService } from '../services/cloudService';
 import { FirestoreService } from '../services/firestoreService';
@@ -17,6 +17,7 @@ import { useResponsiveCanvas, useIsMobile } from '../hooks/useResponsiveCanvas';
 import TeamManager from './TeamManager';
 import { TeamCodeService, TeamData } from '../services/teamCodeService';
 import DebugTeamLoading from './DebugTeamLoading';
+import { AuthLogger } from '../utils/authLogger';
 
 interface PlayerData {
   id: number;
@@ -64,7 +65,7 @@ const VolleyballCourt: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showFormations, setShowFormations] = useState(false);
   const [showLoadFormations, setShowLoadFormations] = useState(false);
-  const [savedFormations, setSavedFormations] = useState<UnifiedFormation[]>(
+  const [savedFormations, setSavedFormations] = useState<GroupedFormation[]>(
     []
   );
   const [teamNames, setTeamNames] = useState<string[]>([]);
@@ -120,13 +121,13 @@ const VolleyballCourt: React.FC = () => {
     if (urlTeamCode) {
       console.log("🔗 Codice team trovato nell'URL:", urlTeamCode);
       try {
-        const existingTeam = await TeamCodeService.loadTeam(urlTeamCode);
-        if (existingTeam) {
+        const result = await TeamCodeService.loadTeam(urlTeamCode);
+        if (result.success && result.team) {
           console.log('✅ Team caricato da codice URL');
-          setCurrentTeam(existingTeam);
+          setCurrentTeam(result.team);
           return;
         } else {
-          console.log('❌ Team con codice non trovato localmente');
+          console.log('❌ Team con codice non trovato localmente:', result.error);
         }
       } catch (error) {
         console.log('❌ Errore caricamento team da URL:', error);
@@ -153,13 +154,52 @@ const VolleyballCourt: React.FC = () => {
   // Carica i dati salvati all'avvio
   useEffect(() => {
     loadSavedPositions();
-    loadFormations();
+    loadFormations(true); // Attendi autenticazione all'avvio
     loadInitialTeam();
   }, []);
 
-  const loadFormations = async () => {
+  const loadFormations = async (waitForAuth: boolean = false) => {
     try {
-      console.log('🔄 Caricamento formazioni...');
+      console.log('🔄 Caricamento formazioni (con cloud automatico)...');
+
+      // Se richiesto, attendi che l'autenticazione sia stabilita
+      if (waitForAuth) {
+        AuthLogger.log('Iniziato caricamento con attesa autenticazione');
+        await new Promise(resolve => {
+          let attempts = 0;
+          const checkAuth = () => {
+            attempts++;
+            const { getCurrentUser } = require('../config/firebase');
+            const user = getCurrentUser();
+            
+            // Considera "stabile" quando:
+            // 1. C'è un utente autenticato (Google o anonimo)
+            // 2. O dopo un timeout di sicurezza (3 secondi)
+            if (user !== null) {
+              AuthLogger.log('Autenticazione stabilita', { 
+                uid: user.uid, 
+                isAnonymous: user.isAnonymous,
+                email: user.email,
+                attempts 
+              });
+              resolve(true);
+            } else {
+              if (attempts % 10 === 0) { // Log ogni secondo (10 attempts * 100ms)
+                AuthLogger.log(`Attesa autenticazione - tentativo ${attempts}`);
+              }
+              setTimeout(checkAuth, 100); // Riprova ogni 100ms
+            }
+          };
+          
+          checkAuth();
+          
+          // Timeout di sicurezza - procedi comunque dopo 3 secondi
+          setTimeout(() => {
+            AuthLogger.log('Timeout autenticazione raggiunto - procedo con caricamento locale');
+            resolve(true);
+          }, 3000);
+        });
+      }
 
       // Debug del database
       const dbStatus = await db.open();
@@ -167,10 +207,15 @@ const VolleyballCourt: React.FC = () => {
       const rotationsCount = await db.rotations.count();
       console.log('📊 Conteggio rotazioni nel DB:', rotationsCount);
 
-      const formations = await FormationService.getAllFormations();
-      const teams = await FormationService.getAllTeamNames();
+      // Usa il nuovo metodo che include automaticamente il cloud
+      const formations = await FormationService.getGroupedFormationsWithAutoCloud();
+      
+      // Estrai i nomi delle squadre dalle formazioni già caricate (evita doppio caricamento)
+      const teamNamesSet = new Set<string>();
+      formations.forEach(f => teamNamesSet.add(f.teamName));
+      const teams = Array.from(teamNamesSet).sort();
 
-      console.log('📊 Formazioni caricate:', formations.length, formations);
+      console.log('📊 Formazioni raggruppate caricate:', formations.length, formations);
       console.log('🏐 Squadre trovate:', teams.length, teams);
 
       setSavedFormations(formations);
@@ -852,23 +897,31 @@ const VolleyballCourt: React.FC = () => {
       console.log('🏠 Squadra home:', homeTeam);
       console.log('👥 Squadra away:', awayTeam);
 
+      // Preparazione dati per il salvataggio con debug sui nomi
+      const homePositions = homeTeam.map((p) => ({
+        zone: p.zone,
+        x: p.x,
+        y: p.y,
+        role: p.role,
+        name: p.name,
+      }));
+      
+      const awayPositions = awayTeam.map((p) => ({
+        zone: p.zone,
+        x: p.x,
+        y: p.y,
+        role: p.role,
+        name: p.name,
+      }));
+
+      console.log('📝 Home positions con nomi:', homePositions);
+      console.log('📝 Away positions con nomi:', awayPositions);
+
       await FormationService.saveFormation(
         autoName,
         teamName,
-        homeTeam.map((p) => ({ 
-          zone: p.zone, 
-          x: p.x, 
-          y: p.y, 
-          role: p.role,
-          name: p.name 
-        })),
-        awayTeam.map((p) => ({ 
-          zone: p.zone, 
-          x: p.x, 
-          y: p.y, 
-          role: p.role,
-          name: p.name 
-        })),
+        homePositions,
+        awayPositions,
         description || undefined
       );
 
@@ -893,7 +946,7 @@ const VolleyballCourt: React.FC = () => {
   };
 
   // Carica una formazione specifica
-  const loadFormation = async (formation: UnifiedFormation) => {
+  const loadFormation = async (formation: GroupedFormation) => {
     try {
       setLoading(true);
 
@@ -930,8 +983,8 @@ const VolleyballCourt: React.FC = () => {
         })
       );
 
-      const sourceText =
-        formation.source === 'cloud' ? '☁️ cloud' : '💾 locale';
+      const sourceText = formation.hasLocal && formation.hasCloud ? '💾☁️ locale+cloud' :
+                         formation.hasCloud ? '☁️ cloud' : '💾 locale';
       alert(
         `✅ Formazione "${formation.name}" caricata con successo da ${sourceText}!\n\nLa squadra "${formation.teamName}" è ora posizionata sul campo.`
       );
@@ -944,26 +997,44 @@ const VolleyballCourt: React.FC = () => {
   };
 
   // Elimina una formazione
-  const deleteFormation = async (formation: UnifiedFormation) => {
+  const deleteFormation = async (formation: GroupedFormation) => {
+    const sources = [];
+    if (formation.hasLocal) sources.push('💾 Locale');
+    if (formation.hasCloud) sources.push('☁️ Cloud');
+    
     if (
       window.confirm(
         `Sei sicuro di voler eliminare la formazione "${
           formation.name
-        }"?\n\nFonte: ${
-          formation.source === 'cloud' ? '☁️ Cloud' : '💾 Locale'
-        }`
+        }"?\n\nSarà eliminata da: ${sources.join(' e ')}`
       )
     ) {
       try {
         setLoading(true);
+        let success = true;
 
-        const success = await FormationService.deleteFormation(
-          formation.id!,
-          formation.source
-        );
+        // Elimina da locale se presente
+        if (formation.hasLocal && formation.localId) {
+          const localSuccess = await FormationService.deleteFormation(
+            formation.localId,
+            'local'
+          );
+          success = success && localSuccess;
+        }
+
+        // Elimina da cloud se presente
+        if (formation.hasCloud && formation.cloudId) {
+          const cloudSuccess = await FormationService.deleteFormation(
+            formation.cloudId,
+            'cloud'
+          );
+          success = success && cloudSuccess;
+        }
 
         if (success) {
-          await loadFormations();
+          // Ricarica con forceRefresh per bypassare cache Firestore
+          const formations = await FormationService.getGroupedFormations(true);
+          setSavedFormations(formations);
           alert(`✅ Formazione "${formation.name}" eliminata con successo!`);
         } else {
           alert(
@@ -1061,9 +1132,7 @@ const VolleyballCourt: React.FC = () => {
               }`}
               title='Gestisci nomi giocatori'
             >
-              {showPlayerNames
-                ? '👥 Nascondi Nomi'
-                : '👥 Nomi Giocatori'}
+              {showPlayerNames ? '👥 Nascondi Nomi' : '👥 Nomi Giocatori'}
             </button>
 
             <div className='border-l border-gray-600 mx-1'></div>
@@ -1534,6 +1603,42 @@ const VolleyballCourt: React.FC = () => {
               📋 Gestione Formazioni
             </h3>
 
+            {/* Status Cloud Indicator */}
+            {(() => {
+              try {
+                const { getCurrentUser } = require('../config/firebase');
+                const user = getCurrentUser();
+                const isGoogleAuth = user && !user.isAnonymous;
+                
+                return (
+                  <div className={`rounded p-2 mb-3 text-sm ${
+                    isGoogleAuth 
+                      ? 'bg-blue-100 border border-blue-300' 
+                      : 'bg-orange-100 border border-orange-300'
+                  }`}>
+                    {isGoogleAuth ? (
+                      <p className='text-blue-800'>
+                        ☁️ <strong>Cloud attivo:</strong> Formazioni locali e cloud visibili
+                      </p>
+                    ) : (
+                      <p className='text-orange-800'>
+                        📱 <strong>Solo locale:</strong> Effettua il login Google (in alto) per vedere le formazioni cloud
+                      </p>
+                    )}
+                  </div>
+                );
+              } catch (error) {
+                // Fallback durante l'inizializzazione
+                return (
+                  <div className='rounded p-2 mb-3 text-sm bg-gray-100 border border-gray-300'>
+                    <p className='text-gray-600'>
+                      ⏳ <strong>Inizializzazione:</strong> Controllo status cloud...
+                    </p>
+                  </div>
+                );
+              }
+            })()}
+
             {loading && (
               <div className='bg-yellow-100 border border-yellow-300 rounded p-2 mb-3'>
                 <p className='text-yellow-800'>🔄 Operazione in corso...</p>
@@ -1556,15 +1661,9 @@ const VolleyballCourt: React.FC = () => {
                       <strong>Squadre diverse:</strong> {teamNames.length}
                     </p>
                     <p className='text-xs text-gray-500 mt-1'>
-                      {
-                        savedFormations.filter((f) => f.source === 'cloud')
-                          .length
-                      }{' '}
+                      {savedFormations.filter((f) => f.hasCloud).length}{' '}
                       nel cloud,{' '}
-                      {
-                        savedFormations.filter((f) => f.source === 'local')
-                          .length
-                      }{' '}
+                      {savedFormations.filter((f) => f.hasLocal).length}{' '}
                       locali
                     </p>
                   </div>
@@ -1604,6 +1703,47 @@ const VolleyballCourt: React.FC = () => {
                       ☁️ Sincronizza con Cloud
                     </button>
                     <button
+                      onClick={async () => {
+                        try {
+                          setLoading(true);
+                          console.log('🔄 Avvio sincronizzazione bidirezionale...');
+                          
+                          const result = await FormationService.syncBidirectional();
+                          
+                          let message = '✅ Sincronizzazione bidirezionale completata!\n\n';
+                          message += `📤 Locale → Cloud: ${result.localToCloud.synced} sincronizzate`;
+                          if (result.localToCloud.failed > 0) {
+                            message += `, ${result.localToCloud.failed} errori`;
+                          }
+                          message += `\n📥 Cloud → Locale: ${result.cloudToLocal.synced} sincronizzate`;
+                          if (result.cloudToLocal.failed > 0) {
+                            message += `, ${result.cloudToLocal.failed} errori`;
+                          }
+                          
+                          if (result.localToCloud.errors.length > 0 || result.cloudToLocal.errors.length > 0) {
+                            message += '\n\n⚠️ Errori:\n';
+                            [...result.localToCloud.errors, ...result.cloudToLocal.errors]
+                              .slice(0, 3)
+                              .forEach(err => message += `• ${err}\n`);
+                          }
+                          
+                          alert(message);
+                          
+                          // Ricarica formazioni per mostrare i nuovi dati
+                          await loadFormations();
+                        } catch (error) {
+                          console.error('❌ Errore sincronizzazione bidirezionale:', error);
+                          alert(`❌ Errore sincronizzazione bidirezionale: ${error}`);
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      disabled={loading}
+                      className='bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 text-xs rounded disabled:opacity-50 transition-colors'
+                    >
+                      ↔️ Sync Bidirezionale
+                    </button>
+                    <button
                       onClick={() => {
                         console.log('🔍 Debug formazioni:', savedFormations);
                         loadFormations();
@@ -1633,11 +1773,9 @@ const VolleyballCourt: React.FC = () => {
                           }\nError: ${
                             syncStatus.error || 'Nessuno'
                           }\n\nFormazioni: ${savedFormations.length}\nLocali: ${
-                            savedFormations.filter((f) => f.source === 'local')
-                              .length
+                            savedFormations.filter((f) => f.hasLocal).length
                           }\nCloud: ${
-                            savedFormations.filter((f) => f.source === 'cloud')
-                              .length
+                            savedFormations.filter((f) => f.hasCloud).length
                           }`
                         );
                       }}
@@ -1670,15 +1808,18 @@ const VolleyballCourt: React.FC = () => {
                               <p className='font-medium text-sm'>
                                 {formation.name}
                               </p>
-                              <span
-                                className={`text-xs px-1 py-0.5 rounded ${
-                                  formation.source === 'cloud'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : 'bg-gray-100 text-gray-600'
-                                }`}
-                              >
-                                {formation.source === 'cloud' ? '☁️' : '💾'}
-                              </span>
+                              <div className="flex gap-1">
+                                {formation.hasLocal && (
+                                  <span className="text-xs px-1 py-0.5 rounded bg-gray-100 text-gray-600">
+                                    💾
+                                  </span>
+                                )}
+                                {formation.hasCloud && (
+                                  <span className="text-xs px-1 py-0.5 rounded bg-blue-100 text-blue-700">
+                                    ☁️
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             {formation.description && (
                               <p className='text-xs text-gray-500'>
@@ -1734,12 +1875,20 @@ const VolleyballCourt: React.FC = () => {
         {showPlayerNames && (
           <div className='bg-green-50 border border-green-200 rounded-lg p-4 max-w-4xl'>
             <div className='flex justify-between items-center mb-4'>
-              <h3 className='font-bold text-green-800'>👥 Gestione Nomi Giocatori</h3>
+              <h3 className='font-bold text-green-800'>
+                👥 Gestione Nomi Giocatori
+              </h3>
               <div className='flex gap-2 items-center'>
                 <button
                   onClick={() => {
-                    if (window.confirm('Vuoi resettare tutti i nomi dei giocatori?')) {
-                      setPlayers(prev => prev.map(p => ({ ...p, name: undefined })));
+                    if (
+                      window.confirm(
+                        'Vuoi resettare tutti i nomi dei giocatori?'
+                      )
+                    ) {
+                      setPlayers((prev) =>
+                        prev.map((p) => ({ ...p, name: undefined }))
+                      );
                       alert('✅ Tutti i nomi sono stati resettati!');
                     }
                   }}
@@ -1775,7 +1924,9 @@ const VolleyballCourt: React.FC = () => {
                           type='text'
                           placeholder='Nome giocatore'
                           value={player.name || ''}
-                          onChange={(e) => updatePlayerName(player.id, e.target.value)}
+                          onChange={(e) =>
+                            updatePlayerName(player.id, e.target.value)
+                          }
                           className='flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500'
                           maxLength={15}
                         />
@@ -1801,7 +1952,9 @@ const VolleyballCourt: React.FC = () => {
                           type='text'
                           placeholder='Nome giocatore'
                           value={player.name || ''}
-                          onChange={(e) => updatePlayerName(player.id, e.target.value)}
+                          onChange={(e) =>
+                            updatePlayerName(player.id, e.target.value)
+                          }
                           className='flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500'
                           maxLength={15}
                         />
@@ -1816,10 +1969,21 @@ const VolleyballCourt: React.FC = () => {
                 <strong>💡 Come funziona:</strong>
               </p>
               <ul className='text-xs text-blue-700 mt-2 space-y-1'>
-                <li>• I nomi dei giocatori vengono mostrati sul campo al posto dei ruoli</li>
-                <li>• I nomi vengono salvati automaticamente nelle formazioni</li>
-                <li>• Lascia vuoto per mostrare il ruolo tradizionale (P, S1, C2, ecc.)</li>
-                <li>• Massimo 15 caratteri per nome per una migliore visualizzazione</li>
+                <li>
+                  • I nomi dei giocatori vengono mostrati sul campo al posto dei
+                  ruoli
+                </li>
+                <li>
+                  • I nomi vengono salvati automaticamente nelle formazioni
+                </li>
+                <li>
+                  • Lascia vuoto per mostrare il ruolo tradizionale (P, S1, C2,
+                  ecc.)
+                </li>
+                <li>
+                  • Massimo 15 caratteri per nome per una migliore
+                  visualizzazione
+                </li>
               </ul>
             </div>
           </div>
@@ -1907,17 +2071,18 @@ const VolleyballCourt: React.FC = () => {
                                 <h5 className='font-medium text-gray-800'>
                                   {formation.name}
                                 </h5>
-                                <span
-                                  className={`text-xs px-2 py-1 rounded-full ${
-                                    formation.source === 'cloud'
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : 'bg-gray-100 text-gray-600'
-                                  }`}
-                                >
-                                  {formation.source === 'cloud'
-                                    ? '☁️ Cloud'
-                                    : '💾 Locale'}
-                                </span>
+                                <div className="flex gap-1">
+                                  {formation.hasLocal && (
+                                    <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
+                                      💾 Locale
+                                    </span>
+                                  )}
+                                  {formation.hasCloud && (
+                                    <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                                      ☁️ Cloud
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                               {formation.description && (
                                 <p className='text-xs text-gray-500 mt-1'>

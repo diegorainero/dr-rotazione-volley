@@ -15,6 +15,7 @@ import {
   onSnapshot,
   Timestamp,
   FieldValue,
+  getDocsFromServer,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { getCurrentUser } from '../config/firebase';
@@ -391,24 +392,38 @@ export class FirestoreService {
       const userId = this.getCurrentUserId();
       const now = new Date().toISOString();
 
+      // Funzione helper per pulire le posizioni
+      const cleanPositions = (positions: FormationPlayerPosition[]) => {
+        return positions.map((pos) => {
+          const cleanPos: any = {
+            zone: pos.zone,
+            x: pos.x,
+            y: pos.y,
+            role: pos.role,
+          };
+          
+          // Aggiungi name solo se è presente e non vuoto
+          if (pos.name && pos.name.trim() !== '') {
+            cleanPos.name = pos.name.trim();
+          }
+          
+          return cleanPos;
+        });
+      };
+
       // Rimuovi campi undefined che Firestore non accetta
       const cleanData: any = {
         name: formationData.name,
         teamName: formationData.teamName,
-        homePositions: formationData.homePositions,
-        awayPositions: formationData.awayPositions,
+        homePositions: cleanPositions(formationData.homePositions),
+        awayPositions: cleanPositions(formationData.awayPositions),
         userId,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
 
-      // Aggiungi description solo se non è undefined/null/empty
-      if (
-        formationData.description &&
-        formationData.description.trim() !== ''
-      ) {
-        cleanData.description = formationData.description.trim();
-      }
+      // Salva sempre description (anche se vuota)
+      cleanData.description = (formationData.description || '').trim();
 
       const docRef = doc(collection(db, this.COLLECTIONS.FORMATIONS));
       await setDoc(docRef, cleanData);
@@ -416,21 +431,16 @@ export class FirestoreService {
       const resultFormation: FormationData = {
         name: formationData.name,
         teamName: formationData.teamName,
-        homePositions: formationData.homePositions,
-        awayPositions: formationData.awayPositions,
+        homePositions: cleanData.homePositions,
+        awayPositions: cleanData.awayPositions,
         userId,
         createdAt: now,
         updatedAt: now,
         id: docRef.id,
       };
 
-      // Aggiungi description solo se presente
-      if (
-        formationData.description &&
-        formationData.description.trim() !== ''
-      ) {
-        resultFormation.description = formationData.description.trim();
-      }
+      // Aggiungi sempre description
+      resultFormation.description = cleanData.description;
 
       console.log(`✅ Formazione salvata: ${formationData.name}`);
       return resultFormation;
@@ -442,24 +452,46 @@ export class FirestoreService {
 
   /**
    * Ottiene tutte le formazioni dell'utente
+   * 
+   * NOTA: Per performance ottimali in produzione, creare l'indice composto:
+   * Collection: formations
+   * Fields: userId (Ascending), createdAt (Descending)
+   * URL: https://console.firebase.google.com/project/dr-rotazioni-volley/firestore/indexes
    */
-  static async getUserFormations(): Promise<FormationData[]> {
+  static async getUserFormations(forceRefresh: boolean = false): Promise<FormationData[]> {
     try {
       const userId = this.getCurrentUserId();
+      // Rimuovo l'orderBy per evitare il problema dell'indice composto
+      // L'ordinamento verrà fatto in memoria
       const q = query(
         collection(db, this.COLLECTIONS.FORMATIONS),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
+        where('userId', '==', userId)
       );
 
-      const querySnapshot = await getDocs(q);
+      // Usa getDocsFromServer per forzare refresh dal server se richiesto
+      const querySnapshot = forceRefresh ? 
+        await getDocsFromServer(q) : 
+        await getDocs(q);
+      
       const formations: FormationData[] = [];
 
       querySnapshot.forEach((doc) => {
         formations.push({ ...(doc.data() as FormationData), id: doc.id });
       });
 
-      console.log(`✅ Caricate ${formations.length} formazioni dell'utente`);
+      if (forceRefresh) {
+        console.log(`🔄 Formazioni caricate dal SERVER (cache bypassed): ${formations.length}`);
+      } else {
+        console.log(`📋 Formazioni caricate (con cache): ${formations.length}`);
+      }
+
+      // Ordina in memoria per data di creazione discendente
+      formations.sort((a, b) => {
+        const dateA = new Date(typeof a.createdAt === 'string' ? a.createdAt : a.createdAt.toDate?.() || new Date());
+        const dateB = new Date(typeof b.createdAt === 'string' ? b.createdAt : b.createdAt.toDate?.() || new Date());
+        return dateB.getTime() - dateA.getTime();
+      });
+
       return formations;
     } catch (error) {
       console.error('❌ Errore caricamento formazioni utente:', error);
@@ -473,23 +505,106 @@ export class FirestoreService {
   static async deleteFormation(formationId: string): Promise<void> {
     try {
       const userId = this.getCurrentUserId();
+      console.log(`🔍 Debug delete: userId=${userId}, formationId=${formationId}`);
+      
       const docRef = doc(db, this.COLLECTIONS.FORMATIONS, formationId);
 
       // Verifica proprietà
       const docSnap = await getDoc(docRef);
       if (!docSnap.exists()) {
+        console.error(`❌ Formazione ${formationId} non trovata`);
         throw new Error('Formazione non trovata');
       }
 
       const data = docSnap.data() as FormationData;
+      console.log(`🔍 Debug: data.userId=${data.userId}, current.userId=${userId}`);
+      
       if (data.userId !== userId) {
+        console.error(`❌ Permessi negati: formazione appartiene a ${data.userId}, utente corrente: ${userId}`);
         throw new Error('Non hai i permessi per eliminare questa formazione');
       }
 
+      console.log(`🗑️ Eliminando documento ${formationId}...`);
       await deleteDoc(docRef);
       console.log(`✅ Formazione eliminata: ${formationId}`);
     } catch (error) {
       console.error('❌ Errore eliminazione formazione:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Aggiorna una formazione esistente
+   */
+  static async updateFormation(
+    formationId: string,
+    formationData: FormationDataInput
+  ): Promise<FormationData> {
+    try {
+      const userId = this.getCurrentUserId();
+      const now = new Date().toISOString();
+
+      // Funzione helper per pulire le posizioni (come in saveFormation)
+      const cleanPositions = (positions: FormationPlayerPosition[]) => {
+        return positions.map((pos) => {
+          const cleanPos: any = {
+            zone: pos.zone,
+            x: pos.x,
+            y: pos.y,
+            role: pos.role,
+          };
+          
+          // Aggiungi name solo se è presente e non vuoto
+          if (pos.name && pos.name.trim() !== '') {
+            cleanPos.name = pos.name.trim();
+          }
+          
+          return cleanPos;
+        });
+      };
+
+      // Verifica che la formazione esista e appartenga all'utente
+      const docRef = doc(db, this.COLLECTIONS.FORMATIONS, formationId);
+      const docSnap = await getDoc(docRef);
+      
+      if (!docSnap.exists()) {
+        throw new Error('Formazione non trovata');
+      }
+      
+      const existingData = docSnap.data() as FormationData;
+      if (existingData.userId !== userId) {
+        throw new Error('Non hai i permessi per aggiornare questa formazione');
+      }
+
+      // Prepara i dati puliti per l'aggiornamento
+      const updateData: any = {
+        name: formationData.name,
+        teamName: formationData.teamName,
+        homePositions: cleanPositions(formationData.homePositions),
+        awayPositions: cleanPositions(formationData.awayPositions),
+        updatedAt: serverTimestamp(),
+      };
+
+      // Salva sempre description (anche se vuota)
+      updateData.description = (formationData.description || '').trim();
+
+      await updateDoc(docRef, updateData);
+
+      const resultFormation: FormationData = {
+        ...existingData,
+        name: formationData.name,
+        teamName: formationData.teamName,
+        homePositions: updateData.homePositions,
+        awayPositions: updateData.awayPositions,
+        description: updateData.description,
+        updatedAt: now,
+        id: formationId,
+      };
+
+      console.log(`✅ Formazione aggiornata: ${formationData.name}`);
+      return resultFormation;
+    } catch (error) {
+      console.error('❌ Errore aggiornamento formazione:', error);
       throw error;
     }
   }

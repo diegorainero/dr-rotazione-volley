@@ -5,6 +5,7 @@ import {
   FormationDataInput,
 } from './firestoreService';
 import { CloudService } from './cloudService';
+import { logFirebaseError, handleFirebaseError } from '../utils/firebaseErrorHandler';
 
 // Tipo unificato per le formazioni
 export interface FormationPosition {
@@ -26,6 +27,15 @@ export interface UnifiedFormation {
   updatedAt: Date | string;
   source: 'local' | 'cloud';
   cloudId?: string; // ID Firestore se salvata anche nel cloud
+}
+
+// Tipo per formazioni raggruppate con informazioni su locale/cloud
+export interface GroupedFormation extends Omit<UnifiedFormation, 'source'> {
+  sources: ('local' | 'cloud')[];
+  hasLocal: boolean;
+  hasCloud: boolean;
+  localId?: string | number;
+  cloudId?: string;
 }
 
 /**
@@ -82,12 +92,8 @@ export class FormationService {
           teamName,
           homePositions,
           awayPositions,
+          description: description || '', // Salva sempre la descrizione, anche se vuota
         };
-
-        // Aggiungi description solo se non è undefined/null/empty
-        if (description && description.trim() !== '') {
-          formationInput.description = description.trim();
-        }
 
         cloudFormation = await FirestoreService.saveFormation(formationInput);
         console.log(
@@ -109,7 +115,7 @@ export class FormationService {
     const unifiedFormation: UnifiedFormation = {
       name,
       teamName,
-      description,
+      description: description || '', // Garantisce sempre una stringa
       homePositions,
       awayPositions,
       createdAt: now,
@@ -122,9 +128,211 @@ export class FormationService {
   }
 
   /**
-   * Carica tutte le formazioni (locali + cloud)
+   * Carica formazioni raggruppate includendo sempre il cloud per la gestione
    */
-  static async getAllFormations(): Promise<UnifiedFormation[]> {
+  static async getGroupedFormationsWithAutoCloud(forceRefresh: boolean = false): Promise<GroupedFormation[]> {
+    const allFormations = await this.getAllFormationsWithAutoCloud(forceRefresh);
+    const groupedMap = new Map<string, GroupedFormation>();
+
+    allFormations.forEach(formation => {
+      // Chiave per raggruppare: nome + teamName + description
+      const key = `${formation.name}|${formation.teamName}|${formation.description || ''}`;
+      
+      if (groupedMap.has(key)) {
+        // Aggiorna formazione esistente
+        const existing = groupedMap.get(key)!;
+        existing.sources.push(formation.source);
+        
+        if (formation.source === 'local') {
+          existing.hasLocal = true;
+          existing.localId = formation.id;
+          // Usa sempre i dati locali come primari (più aggiornati)
+          existing.homePositions = formation.homePositions;
+          existing.awayPositions = formation.awayPositions;
+          existing.updatedAt = formation.updatedAt;
+        } else {
+          existing.hasCloud = true;
+          existing.cloudId = formation.cloudId || (formation.id as string);
+        }
+      } else {
+        // Crea nuova formazione raggruppata
+        groupedMap.set(key, {
+          id: formation.id,
+          name: formation.name,
+          teamName: formation.teamName,
+          description: formation.description,
+          homePositions: formation.homePositions,
+          awayPositions: formation.awayPositions,
+          createdAt: formation.createdAt,
+          updatedAt: formation.updatedAt,
+          sources: [formation.source],
+          hasLocal: formation.source === 'local',
+          hasCloud: formation.source === 'cloud',
+          localId: formation.source === 'local' ? formation.id : undefined,
+          cloudId: formation.source === 'cloud' ? (formation.cloudId || formation.id as string) : undefined,
+        });
+      }
+    });
+
+    // Converti Map in Array e ordina
+    const result = Array.from(groupedMap.values());
+    result.sort((a, b) => {
+      const dateA = new Date(a.updatedAt);
+      const dateB = new Date(b.updatedAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    console.log(`📋 Formazioni raggruppate (con cloud auto): ${result.length} (da ${allFormations.length} totali)`);
+    return result;
+  }
+
+  /**
+   * Carica formazioni raggruppate (stesso nome/team/description = una riga con icone multiple)
+   */
+  static async getGroupedFormations(forceRefresh: boolean = false): Promise<GroupedFormation[]> {
+    const allFormations = await this.getAllFormations(forceRefresh);
+    const groupedMap = new Map<string, GroupedFormation>();
+
+    allFormations.forEach(formation => {
+      // Chiave per raggruppare: nome + teamName + description
+      const key = `${formation.name}|${formation.teamName}|${formation.description || ''}`;
+      
+      if (groupedMap.has(key)) {
+        // Aggiorna formazione esistente
+        const existing = groupedMap.get(key)!;
+        existing.sources.push(formation.source);
+        
+        if (formation.source === 'local') {
+          existing.hasLocal = true;
+          existing.localId = formation.id;
+          // Usa sempre i dati locali come primari (più aggiornati)
+          existing.homePositions = formation.homePositions;
+          existing.awayPositions = formation.awayPositions;
+          existing.updatedAt = formation.updatedAt;
+        } else {
+          existing.hasCloud = true;
+          existing.cloudId = formation.cloudId || (formation.id as string);
+        }
+      } else {
+        // Crea nuova formazione raggruppata
+        groupedMap.set(key, {
+          id: formation.id,
+          name: formation.name,
+          teamName: formation.teamName,
+          description: formation.description,
+          homePositions: formation.homePositions,
+          awayPositions: formation.awayPositions,
+          createdAt: formation.createdAt,
+          updatedAt: formation.updatedAt,
+          sources: [formation.source],
+          hasLocal: formation.source === 'local',
+          hasCloud: formation.source === 'cloud',
+          localId: formation.source === 'local' ? formation.id : undefined,
+          cloudId: formation.source === 'cloud' ? (formation.cloudId || formation.id as string) : undefined,
+        });
+      }
+    });
+
+    // Converti Map in Array e ordina
+    const result = Array.from(groupedMap.values());
+    result.sort((a, b) => {
+      const dateA = new Date(a.updatedAt);
+      const dateB = new Date(b.updatedAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    console.log(`📋 Formazioni raggruppate: ${result.length} (da ${allFormations.length} totali)`);
+    return result;
+  }
+
+  /**
+   * Carica tutte le formazioni includendo sempre il cloud per la gestione formazioni
+   */
+  static async getAllFormationsWithAutoCloud(forceRefresh: boolean = false): Promise<UnifiedFormation[]> {
+    console.log('🆔 FormationService.getAllFormationsWithAutoCloud v2.0 - Cache refresh verificato');
+    const allFormations: UnifiedFormation[] = [];
+
+    // 1. Carica formazioni locali
+    try {
+      const localFormations = await rotationsService.getAll();
+
+      for (const local of localFormations) {
+        allFormations.push({
+          id: local.id,
+          name: local.name,
+          teamName: local.teamName,
+          description: local.description,
+          homePositions: local.homePositions,
+          awayPositions: local.awayPositions,
+          createdAt: local.createdAt,
+          updatedAt: local.updatedAt,
+          source: 'local',
+        });
+      }
+
+      console.log(`📱 Caricate ${localFormations.length} formazioni locali`);
+    } catch (error) {
+      console.error('❌ Errore caricamento formazioni locali:', error);
+    }
+
+    // 2. Tenta caricamento cloud con gestione errori permessi
+    let user: any = null;
+    try {
+      const { AuthWaiter } = await import('../utils/authWaiter');
+      user = await AuthWaiter.waitForAuth(15); // Max 1.5 secondi per formazioni
+      const isGoogleAuth = user && !user.isAnonymous;
+
+      if (isGoogleAuth) {
+        console.log('☁️ Caricamento formazioni cloud (utente Google autenticato)...');
+        const cloudFormations = await FirestoreService.getUserFormations(forceRefresh);
+
+        for (const cloud of cloudFormations) {
+          allFormations.push({
+            id: cloud.id,
+            name: cloud.name,
+            teamName: cloud.teamName,
+            description: cloud.description,
+            homePositions: cloud.homePositions,
+            awayPositions: cloud.awayPositions,
+            createdAt:
+              typeof cloud.createdAt === 'string'
+                ? cloud.createdAt
+                : new Date(),
+            updatedAt:
+              typeof cloud.updatedAt === 'string'
+                ? cloud.updatedAt
+                : new Date(),
+            source: 'cloud',
+            cloudId: cloud.id,
+          });
+        }
+
+        console.log(`☁️ Caricate ${cloudFormations.length} formazioni cloud`);
+      } else {
+        console.log('ℹ️ Utente non autenticato con Google - skip caricamento cloud formazioni');
+        console.log('   Per vedere le formazioni cloud, effettua il login Google dalla barra in alto');
+      }
+    } catch (error: any) {
+      // Gestione strutturata errori Firebase
+      logFirebaseError('getAllFormationsWithAutoCloud', error, {
+        forceRefresh,
+        userAuthenticated: !!user,
+        isAnonymous: user?.isAnonymous
+      });
+      
+      const errorInfo = handleFirebaseError(error);
+      console.log(`ℹ️ ${errorInfo.userMessage}`);
+      
+      // Non fermare l'esecuzione, continua solo con quelle locali
+    }
+
+    return allFormations;
+  }
+
+  /**
+   * Carica tutte le formazioni (locali + cloud solo se sync abilitato)
+   */
+  static async getAllFormations(forceRefresh: boolean = false): Promise<UnifiedFormation[]> {
     const allFormations: UnifiedFormation[] = [];
 
     // 1. Carica formazioni locali
@@ -153,7 +361,7 @@ export class FormationService {
     // 2. Carica formazioni cloud se disponibile
     try {
       if (CloudService.getSyncStatus().isEnabled) {
-        const cloudFormations = await FirestoreService.getUserFormations();
+        const cloudFormations = await FirestoreService.getUserFormations(forceRefresh);
 
         for (const cloud of cloudFormations) {
           // Evita duplicati se già presente una versione locale
@@ -261,10 +469,25 @@ export class FormationService {
         console.log(`🗑️ Formazione locale ${id} eliminata`);
         return true;
       } else if (source === 'cloud' && typeof id === 'string') {
-        if (CloudService.getSyncStatus().isEnabled) {
+        const syncStatus = CloudService.getSyncStatus();
+        console.log('🔍 Debug delete cloud - Sync Status:', syncStatus);
+        
+        if (!syncStatus.isEnabled) {
+          console.warn('⚠️ Tentativo auto-abilitazione cloud per delete...');
+          const autoEnabled = await CloudService.autoEnableCloudSync();
+          console.log('🔄 Auto-enable result:', autoEnabled);
+        }
+
+        const currentStatus = CloudService.getSyncStatus();
+        if (currentStatus.isEnabled) {
+          console.log(`🗑️ Eliminando formazione cloud ${id}...`);
           await FirestoreService.deleteFormation(id);
-          console.log(`🗑️ Formazione cloud ${id} eliminata`);
+          console.log(`✅ Formazione cloud ${id} eliminata con successo`);
+          
           return true;
+        } else {
+          console.error('❌ Cloud sync non disponibile per delete:', currentStatus);
+          return false;
         }
       }
 
@@ -289,7 +512,8 @@ export class FormationService {
   }
 
   /**
-   * Sincronizza formazioni locali con il cloud
+   * Sincronizza TUTTE le formazioni locali con il cloud (sincronizzazione forzata)
+   * Questo crea sempre nuove copie sul cloud di tutte le formazioni locali
    */
   static async syncToCloud(): Promise<{
     synced: number;
@@ -332,24 +556,38 @@ export class FormationService {
 
     try {
       const localFormations = await rotationsService.getAll();
+      const cloudFormations = await FirestoreService.getUserFormations();
+      
+      console.log(`🚀 SYNC INTELLIGENTE: Elaboro ${localFormations.length} formazioni locali`);
 
       for (const local of localFormations) {
         try {
+          // Trova formazione esistente per nome, teamName e description
+          const existingCloud = cloudFormations.find(cloud => 
+            cloud.name === local.name && 
+            cloud.teamName === local.teamName &&
+            (cloud.description || '') === (local.description || '')
+          );
+
           const formationInput: FormationDataInput = {
             name: local.name,
             teamName: local.teamName,
             homePositions: local.homePositions,
             awayPositions: local.awayPositions,
+            description: local.description || '',
           };
 
-          // Aggiungi description solo se presente
-          if (local.description && local.description.trim() !== '') {
-            formationInput.description = local.description.trim();
+          if (existingCloud && existingCloud.id) {
+            // UPDATE: Aggiorna formazione esistente
+            await FirestoreService.updateFormation(existingCloud.id, formationInput);
+            result.synced++;
+            console.log(`🔄 AGGIORNATA: ${local.name}`);
+          } else {
+            // CREATE: Crea nuova formazione
+            await FirestoreService.saveFormation(formationInput);
+            result.synced++;
+            console.log(`✨ CREATA: ${local.name}`);
           }
-
-          await FirestoreService.saveFormation(formationInput);
-          result.synced++;
-          console.log(`☁️ Sincronizzata: ${local.name}`);
         } catch (error: any) {
           result.failed++;
           result.errors.push(`${local.name}: ${error.message}`);
@@ -357,7 +595,7 @@ export class FormationService {
       }
 
       console.log(
-        `✅ Sync completata: ${result.synced} successi, ${result.failed} errori`
+        `✅ SINCRONIZZAZIONE FORZATA completata: ${result.synced} formazioni inviate al cloud, ${result.failed} errori`
       );
     } catch (error: any) {
       result.failed++;
@@ -391,5 +629,120 @@ export class FormationService {
     } catch (error) {
       console.warn('⚠️ Errore durante la pulizia cloud:', error);
     }
+  }
+
+  /**
+   * Sincronizzazione bidirezionale completa (locale ↔ cloud)
+   */
+  static async syncBidirectional(): Promise<{
+    localToCloud: { synced: number; failed: number; errors: string[] };
+    cloudToLocal: { synced: number; failed: number; errors: string[] };
+  }> {
+    const result = {
+      localToCloud: { synced: 0, failed: 0, errors: [] as string[] },
+      cloudToLocal: { synced: 0, failed: 0, errors: [] as string[] }
+    };
+
+    // Debug stato cloud
+    let syncStatus = CloudService.getSyncStatus();
+    console.log('🔍 Sincronizzazione bidirezionale - Stato cloud:', syncStatus);
+
+    // Auto-abilita cloud se necessario
+    if (!syncStatus.isEnabled) {
+      console.log('🔄 Auto-abilitazione cloud per sync bidirezionale...');
+      const autoEnabled = await CloudService.autoEnableCloudSync();
+      if (!autoEnabled) {
+        const error = 'Impossibile abilitare il cloud sync';
+        result.localToCloud.errors.push(error);
+        result.cloudToLocal.errors.push(error);
+        return result;
+      }
+      syncStatus = CloudService.getSyncStatus();
+    }
+
+    try {
+      // 1. SYNC LOCALE → CLOUD (formazioni locali mancanti sul cloud)
+      console.log('📤 Fase 1: Sincronizzazione locale → cloud');
+      const localFormations = await rotationsService.getAll();
+      const cloudFormations = await FirestoreService.getUserFormations(true);
+
+      for (const localFormation of localFormations) {
+        try {
+          // Cerca se esiste già sul cloud (stesso nome, team, descrizione)
+          const existsOnCloud = cloudFormations.find(
+            cloud => cloud.name === localFormation.name && 
+                    cloud.teamName === localFormation.teamName &&
+                    (cloud.description || '') === (localFormation.description || '')
+          );
+
+          if (!existsOnCloud) {
+            // Non esiste sul cloud, caricala
+            console.log(`📤 Caricamento sul cloud: ${localFormation.name} (${localFormation.teamName})`);
+            
+            const formationInput: FormationDataInput = {
+              name: localFormation.name,
+              teamName: localFormation.teamName,
+              description: localFormation.description || '',
+              homePositions: localFormation.homePositions,
+              awayPositions: localFormation.awayPositions,
+            };
+
+            await FirestoreService.saveFormation(formationInput);
+            result.localToCloud.synced++;
+          }
+        } catch (error) {
+          console.error(`❌ Errore sync locale→cloud per "${localFormation.name}":`, error);
+          result.localToCloud.failed++;
+          result.localToCloud.errors.push(`${localFormation.name}: ${error}`);
+        }
+      }
+
+      // 2. SYNC CLOUD → LOCALE (formazioni cloud mancanti localmente)
+      console.log('📥 Fase 2: Sincronizzazione cloud → locale');
+      // Ricarica le formazioni cloud per includere quelle appena caricate
+      const updatedCloudFormations = await FirestoreService.getUserFormations(true);
+
+      for (const cloudFormation of updatedCloudFormations) {
+        try {
+          // Cerca se esiste già localmente (stesso nome, team, descrizione)  
+          const existsLocally = localFormations.find(
+            local => local.name === cloudFormation.name && 
+                    local.teamName === cloudFormation.teamName &&
+                    (local.description || '') === (cloudFormation.description || '')
+          );
+
+          if (!existsLocally) {
+            // Non esiste localmente, scaricala
+            console.log(`📥 Download dal cloud: ${cloudFormation.name} (${cloudFormation.teamName})`);
+            
+            await rotationsService.save(
+              cloudFormation.name,
+              cloudFormation.teamName,
+              cloudFormation.homePositions,
+              cloudFormation.awayPositions,
+              cloudFormation.description || ''
+            );
+            
+            result.cloudToLocal.synced++;
+          }
+        } catch (error) {
+          console.error(`❌ Errore sync cloud→locale per "${cloudFormation.name}":`, error);
+          result.cloudToLocal.failed++;
+          result.cloudToLocal.errors.push(`${cloudFormation.name}: ${error}`);
+        }
+      }
+
+      console.log('✅ Sincronizzazione bidirezionale completata:');
+      console.log(`  📤 Locale→Cloud: ${result.localToCloud.synced} sincronizzate, ${result.localToCloud.failed} errori`);
+      console.log(`  📥 Cloud→Locale: ${result.cloudToLocal.synced} sincronizzate, ${result.cloudToLocal.failed} errori`);
+
+    } catch (error) {
+      console.error('❌ Errore durante sincronizzazione bidirezionale:', error);
+      const errorMsg = `Errore generale: ${error}`;
+      result.localToCloud.errors.push(errorMsg);
+      result.cloudToLocal.errors.push(errorMsg);
+    }
+
+    return result;
   }
 }

@@ -26,10 +26,10 @@ const Player: React.FC<PlayerProps> = ({
 }) => {
   const radius = Math.max(20, 35 * scale); // Cerchi più grandi
   const fontSize = Math.max(10, 14 * scale); // Font size leggermente più grande
-  
+
   // Usa il nome se presente, altrimenti il ruolo
   const displayText = name && name.trim() !== '' ? name : role;
-  
+
   // Per i nomi lunghi, riduci il font size per adattarsi al cerchio
   const adjustedFontSize = displayText.length > 4 ? fontSize * 0.85 : fontSize;
 

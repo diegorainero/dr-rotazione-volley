@@ -4,6 +4,7 @@ import AppInfo from './components/AppInfo';
 import { MigrationPanel } from './components/MigrationPanel';
 import { CloudStatus } from './components/CloudStatus';
 import AuthManager from './components/AuthManager';
+import AuthStatusIndicator from './components/AuthStatusIndicator';
 import { useAuth } from './hooks/useAuth';
 import { User } from 'firebase/auth';
 import './utils/firestoreTest'; // Import test utilities
@@ -66,6 +67,9 @@ function App() {
   // User authenticated - show main app
   return (
     <div className='min-h-screen flex flex-col items-center justify-center bg-green-100'>
+      {/* Auth Status Indicator - solo in development */}
+      {process.env.NODE_ENV === 'development' && <AuthStatusIndicator />}
+      
       <div className='flex items-center gap-4 mb-4'>
         <h1 className='text-2xl font-bold'>Analizzatore Rotazioni Pallavolo</h1>
         <CloudStatus onOpenMigration={() => setShowMigrationPanel(true)} />
