@@ -14,8 +14,8 @@ export interface SavedRotation {
   name: string;
   teamName: string; // Nome della squadra
   description?: string; // Descrizione opzionale
-  homePositions: { zone: number; x: number; y: number; role: string }[];
-  awayPositions: { zone: number; x: number; y: number; role: string }[];
+  homePositions: { zone: number; x: number; y: number; role: string; name?: string }[];
+  awayPositions: { zone: number; x: number; y: number; role: string; name?: string }[];
   createdAt: Date;
   updatedAt: Date;
 }

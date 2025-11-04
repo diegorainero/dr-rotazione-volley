@@ -5,6 +5,7 @@ interface PlayerProps {
   x: number;
   y: number;
   role: string; // Il ruolo del giocatore (P, S1, C2, O, S2, C1)
+  name?: string; // Il nome del giocatore (opzionale)
   color?: string;
   draggable?: boolean;
   scale?: number;
@@ -16,14 +17,21 @@ const Player: React.FC<PlayerProps> = ({
   x,
   y,
   role,
+  name,
   color = '#3498db',
   draggable = true,
   scale = 1,
   onDragEnd,
   onClick,
 }) => {
-  const radius = Math.max(15, 25 * scale); // Raggio minimo per mobile
-  const fontSize = Math.max(10, 16 * scale); // Font size minimo per mobile
+  const radius = Math.max(20, 35 * scale); // Cerchi più grandi
+  const fontSize = Math.max(10, 14 * scale); // Font size leggermente più grande
+  
+  // Usa il nome se presente, altrimenti il ruolo
+  const displayText = name && name.trim() !== '' ? name : role;
+  
+  // Per i nomi lunghi, riduci il font size per adattarsi al cerchio
+  const adjustedFontSize = displayText.length > 4 ? fontSize * 0.85 : fontSize;
 
   return (
     <Group
@@ -37,13 +45,17 @@ const Player: React.FC<PlayerProps> = ({
     >
       <Circle radius={radius} fill={color} />
       <Text
-        text={role}
-        fontSize={fontSize}
+        text={displayText}
+        fontSize={adjustedFontSize}
         fill='white'
         align='center'
         verticalAlign='middle'
-        offsetX={role.length > 1 ? fontSize * 0.6 : fontSize * 0.3}
-        offsetY={fontSize * 0.6}
+        offsetX={radius}
+        offsetY={radius}
+        width={radius * 2}
+        height={radius * 2}
+        ellipsis={true}
+        wrap='none'
       />
     </Group>
   );

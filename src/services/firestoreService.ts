@@ -78,6 +78,7 @@ export interface FormationPlayerPosition {
   x: number;
   y: number;
   role: string;
+  name?: string; // Nome personalizzato del giocatore
 }
 
 // Tipo per formazioni su Firestore

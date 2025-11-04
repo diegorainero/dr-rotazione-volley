@@ -12,6 +12,7 @@ export interface FormationPosition {
   x: number;
   y: number;
   role: string;
+  name?: string; // Nome personalizzato del giocatore
 }
 
 export interface UnifiedFormation {

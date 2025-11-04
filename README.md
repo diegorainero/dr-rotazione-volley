@@ -42,6 +42,15 @@
 - **📱 Multi-Device**: Accedi alle tue formazioni da qualsiasi dispositivo
 - **🚫 No Duplicati**: Sistema intelligente che evita duplicazioni
 
+### 👥 **NUOVO** Sistema Nomi Giocatori  
+- **🏷️ Nomi Personalizzati**: Inserisci nomi reali per entrambe le squadre
+- **🎨 Visualizzazione Intelligente**: Mostra nome se presente, altrimenti ruolo (P, S1, C2)
+- **💾 Persistenza Completa**: Nomi salvati in formazioni locali e cloud
+- **📱 UI Dedicata**: Pannello separato per gestione nomi giocatori
+- **🔄 Reset Rapido**: Pulsante per resettare tutti i nomi istantaneamente
+- **📏 Ottimizzazione**: Max 15 caratteri per nome, font adattivo per leggibilità
+- **🚀 Realismo**: Trasforma l'app da generica a personalizzata per ogni squadra
+
 ### 📱 Interfaccia
 - **Header compatto**: Tutti i controlli organizzati
 - **Responsive**: Funziona su desktop e mobile

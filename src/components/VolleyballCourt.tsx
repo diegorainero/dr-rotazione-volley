@@ -26,6 +26,7 @@ interface PlayerData {
   team: 'home' | 'away';
   color: string;
   role: string; // Il ruolo fisso del giocatore (P, S1, C2, O, S2, C1)
+  name?: string; // Il nome personalizzato del giocatore
   isTracked?: boolean; // Se il giocatore è in modalità tracking
   trackColor?: string; // Colore personalizzato per il tracking
 }
@@ -71,6 +72,8 @@ const VolleyballCourt: React.FC = () => {
   // Stati per il Libero
   const [liberoModeHome, setLiberoModeHome] = useState(false);
   const [liberoModeAway, setLiberoModeAway] = useState(false);
+  // Stato per la gestione nomi giocatori
+  const [showPlayerNames, setShowPlayerNames] = useState(false);
 
   // Hook per responsive canvas
   const canvasSize = useResponsiveCanvas({
@@ -852,8 +855,20 @@ const VolleyballCourt: React.FC = () => {
       await FormationService.saveFormation(
         autoName,
         teamName,
-        homeTeam.map((p) => ({ zone: p.zone, x: p.x, y: p.y, role: p.role })),
-        awayTeam.map((p) => ({ zone: p.zone, x: p.x, y: p.y, role: p.role })),
+        homeTeam.map((p) => ({ 
+          zone: p.zone, 
+          x: p.x, 
+          y: p.y, 
+          role: p.role,
+          name: p.name 
+        })),
+        awayTeam.map((p) => ({ 
+          zone: p.zone, 
+          x: p.x, 
+          y: p.y, 
+          role: p.role,
+          name: p.name 
+        })),
         description || undefined
       );
 
@@ -895,6 +910,7 @@ const VolleyballCourt: React.FC = () => {
                   x: savedPlayer.x,
                   y: savedPlayer.y,
                   zone: savedPlayer.zone,
+                  name: savedPlayer.name,
                 }
               : p;
           } else {
@@ -907,6 +923,7 @@ const VolleyballCourt: React.FC = () => {
                   x: savedPlayer.x,
                   y: savedPlayer.y,
                   zone: savedPlayer.zone,
+                  name: savedPlayer.name,
                 }
               : p;
           }
@@ -960,6 +977,17 @@ const VolleyballCourt: React.FC = () => {
         setLoading(false);
       }
     }
+  };
+
+  // Funzione per aggiornare il nome di un giocatore
+  const updatePlayerName = (playerId: number, newName: string) => {
+    setPlayers((prevPlayers) =>
+      prevPlayers.map((player) =>
+        player.id === playerId
+          ? { ...player, name: newName.trim() || undefined }
+          : player
+      )
+    );
   };
 
   return (
@@ -1023,6 +1051,19 @@ const VolleyballCourt: React.FC = () => {
               {showFormations
                 ? '📋 Nascondi Gestione'
                 : '📋 Gestisci Formazioni'}
+            </button>
+            <button
+              onClick={() => setShowPlayerNames(!showPlayerNames)}
+              className={`px-3 py-1 text-xs rounded transition-colors ${
+                showPlayerNames
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-gray-600 hover:bg-gray-500 text-white'
+              }`}
+              title='Gestisci nomi giocatori'
+            >
+              {showPlayerNames
+                ? '👥 Nascondi Nomi'
+                : '👥 Nomi Giocatori'}
             </button>
 
             <div className='border-l border-gray-600 mx-1'></div>
@@ -1274,6 +1315,7 @@ const VolleyballCourt: React.FC = () => {
                       x={p.x * canvasSize.scale}
                       y={p.y * canvasSize.scale}
                       role={convertRoleToDisplay(p.role, p.id)}
+                      name={p.name}
                       color={getPlayerColor(p)}
                       scale={canvasSize.scale}
                       draggable={p.team === 'home'}
@@ -1685,6 +1727,100 @@ const VolleyballCourt: React.FC = () => {
                   </p>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {showPlayerNames && (
+          <div className='bg-green-50 border border-green-200 rounded-lg p-4 max-w-4xl'>
+            <div className='flex justify-between items-center mb-4'>
+              <h3 className='font-bold text-green-800'>👥 Gestione Nomi Giocatori</h3>
+              <div className='flex gap-2 items-center'>
+                <button
+                  onClick={() => {
+                    if (window.confirm('Vuoi resettare tutti i nomi dei giocatori?')) {
+                      setPlayers(prev => prev.map(p => ({ ...p, name: undefined })));
+                      alert('✅ Tutti i nomi sono stati resettati!');
+                    }
+                  }}
+                  className='bg-red-500 hover:bg-red-600 text-white px-3 py-1 text-xs rounded transition-colors'
+                  title='Reset tutti i nomi'
+                >
+                  🔄 Reset Nomi
+                </button>
+                <button
+                  onClick={() => setShowPlayerNames(false)}
+                  className='text-gray-500 hover:text-gray-700 text-xl'
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+              {/* Squadra di Casa */}
+              <div className='bg-white rounded-lg p-4 border border-green-300'>
+                <h4 className='font-semibold text-green-700 mb-3 flex items-center'>
+                  🏠 Squadra di Casa
+                </h4>
+                <div className='space-y-3'>
+                  {players
+                    .filter((p) => p.team === 'home')
+                    .map((player) => (
+                      <div key={player.id} className='flex items-center gap-3'>
+                        <div className='w-12 h-8 bg-blue-500 text-white text-xs rounded flex items-center justify-center font-bold'>
+                          {convertRoleToDisplay(player.role, player.id)}
+                        </div>
+                        <input
+                          type='text'
+                          placeholder='Nome giocatore'
+                          value={player.name || ''}
+                          onChange={(e) => updatePlayerName(player.id, e.target.value)}
+                          className='flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500'
+                          maxLength={15}
+                        />
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Squadra Ospite */}
+              <div className='bg-white rounded-lg p-4 border border-green-300'>
+                <h4 className='font-semibold text-green-700 mb-3 flex items-center'>
+                  🚌 Squadra Ospite
+                </h4>
+                <div className='space-y-3'>
+                  {players
+                    .filter((p) => p.team === 'away')
+                    .map((player) => (
+                      <div key={player.id} className='flex items-center gap-3'>
+                        <div className='w-12 h-8 bg-red-500 text-white text-xs rounded flex items-center justify-center font-bold'>
+                          {convertRoleToDisplay(player.role, player.id)}
+                        </div>
+                        <input
+                          type='text'
+                          placeholder='Nome giocatore'
+                          value={player.name || ''}
+                          onChange={(e) => updatePlayerName(player.id, e.target.value)}
+                          className='flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500'
+                          maxLength={15}
+                        />
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+
+            <div className='mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200'>
+              <p className='text-sm text-blue-800'>
+                <strong>💡 Come funziona:</strong>
+              </p>
+              <ul className='text-xs text-blue-700 mt-2 space-y-1'>
+                <li>• I nomi dei giocatori vengono mostrati sul campo al posto dei ruoli</li>
+                <li>• I nomi vengono salvati automaticamente nelle formazioni</li>
+                <li>• Lascia vuoto per mostrare il ruolo tradizionale (P, S1, C2, ecc.)</li>
+                <li>• Massimo 15 caratteri per nome per una migliore visualizzazione</li>
+              </ul>
             </div>
           </div>
         )}
