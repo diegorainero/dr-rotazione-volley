@@ -14,7 +14,6 @@ import {
   serverTimestamp,
   onSnapshot,
   Timestamp,
-  FieldValue,
   getDocsFromServer,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';

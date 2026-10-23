@@ -55,8 +55,6 @@ const AuthManager: React.FC<AuthManagerProps> = ({
     }
   };
 
-  const isAnonymous = user?.isAnonymous;
-
   return (
     <div className='bg-white rounded-lg shadow-sm border p-4 mb-4'>
       <div className='flex items-center justify-between mb-3'>
@@ -111,7 +109,7 @@ const AuthManager: React.FC<AuthManagerProps> = ({
 
           <button
             onClick={handleGoogleSignIn}
-            disabled={isLoading}
+            disabled={isLoading || authLoading}
             className='w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2'
           >
             {isLoading ? '⏳' : '🔗'} Accedi con Google

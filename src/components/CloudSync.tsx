@@ -1,5 +1,5 @@
 // src/components/CloudSync.tsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { User } from 'firebase/auth';
 import { CloudService, CloudSyncStatus } from '../services/cloudService';
 import { TeamCodeService } from '../services/teamCodeService';

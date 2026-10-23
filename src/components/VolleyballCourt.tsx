@@ -1093,7 +1093,7 @@ const VolleyballCourt: React.FC = () => {
               />
               <button
                 onClick={() => setShowTeamManager(true)}
-                className='bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 text-xs rounded'
+                className='bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 min-h-[40px] text-xs rounded'
                 title='Gestisci squadre'
               >
                 👥 Team
@@ -1110,8 +1110,8 @@ const VolleyballCourt: React.FC = () => {
             <button
               onClick={saveCurrentFormation}
               disabled={loading}
-              className={`bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors ${
-                isMobile ? 'min-h-[40px] text-xs' : ''
+              className={`bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 min-h-[40px] text-xs rounded disabled:opacity-50 transition-colors ${
+                isMobile ? 'text-xs' : ''
               }`}
               title='Salva la formazione corrente (richiede solo squadra e descrizione)'
             >
@@ -1120,15 +1120,15 @@ const VolleyballCourt: React.FC = () => {
             <button
               onClick={() => setShowLoadFormations(!showLoadFormations)}
               disabled={loading}
-              className={`bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors ${
-                isMobile ? 'min-h-[40px] text-xs' : ''
+              className={`bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 min-h-[40px] text-xs rounded disabled:opacity-50 transition-colors ${
+                isMobile ? 'text-xs' : ''
               }`}
             >
               📂 {isMobile ? 'Carica' : 'Carica Formazione'}
             </button>
             <button
               onClick={() => setShowFormations(!showFormations)}
-              className={`px-3 py-1 text-xs rounded transition-colors ${
+              className={`px-3 py-1 min-h-[40px] text-xs rounded transition-colors ${
                 showFormations
                   ? 'bg-blue-600 hover:bg-blue-700 text-white'
                   : 'bg-gray-600 hover:bg-gray-500 text-white'
@@ -1140,7 +1140,7 @@ const VolleyballCourt: React.FC = () => {
             </button>
             <button
               onClick={() => setShowPlayerNames(!showPlayerNames)}
-              className={`px-3 py-1 text-xs rounded transition-colors ${
+              className={`px-3 py-1 min-h-[40px] text-xs rounded transition-colors ${
                 showPlayerNames
                   ? 'bg-green-600 hover:bg-green-700 text-white'
                   : 'bg-gray-600 hover:bg-gray-500 text-white'
@@ -1162,9 +1162,7 @@ const VolleyballCourt: React.FC = () => {
                   `✅ Modalità ${modeName} salvata per le prossime sessioni`
                 );
               }}
-              className={`px-3 py-1 text-xs rounded transition-all duration-200 ${
-                isMobile ? 'min-h-[40px]' : ''
-              } ${
+              className={`px-3 py-1 min-h-[40px] text-xs rounded transition-all duration-200 ${
                 isUnder13Mode
                   ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-md'
                   : 'bg-gray-600 hover:bg-gray-500 text-white shadow-md'
@@ -1187,7 +1185,7 @@ const VolleyballCourt: React.FC = () => {
             <button
               onClick={saveReceivePositions}
               disabled={loading}
-              className='bg-green-600 hover:bg-green-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors'
+              className='bg-green-600 hover:bg-green-700 text-white px-3 py-1 min-h-[40px] text-xs rounded disabled:opacity-50 transition-colors'
               title='Salva la posizione di ricezione corrente'
             >
               💾 Salva Ricezione
@@ -1195,21 +1193,21 @@ const VolleyballCourt: React.FC = () => {
             <button
               onClick={applyReceivePositions}
               disabled={loading}
-              className='bg-teal-600 hover:bg-teal-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors'
+              className='bg-teal-600 hover:bg-teal-700 text-white px-3 py-1 min-h-[40px] text-xs rounded disabled:opacity-50 transition-colors'
               title='Carica la ricezione salvata per questa rotazione (silenzioso)'
             >
               📍 Carica Ricezione
             </button>
             <button
               onClick={resetPositions}
-              className='bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 text-xs rounded transition-colors'
+              className='bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 min-h-[40px] text-xs rounded transition-colors'
               title='Reset posizioni alla formazione base'
             >
               🔄 Reset Posizioni
             </button>
             <button
               onClick={() => setShowReceiveMode(!showReceiveMode)}
-              className={`px-3 py-1 text-xs rounded transition-colors ${
+              className={`px-3 py-1 min-h-[40px] text-xs rounded transition-colors ${
                 showReceiveMode
                   ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
                   : 'bg-gray-600 hover:bg-gray-500 text-white'
@@ -1223,21 +1221,21 @@ const VolleyballCourt: React.FC = () => {
             <button
               onClick={exportPositions}
               disabled={loading}
-              className='bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors'
+              className='bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 min-h-[40px] text-xs rounded disabled:opacity-50 transition-colors'
             >
               � Esporta
             </button>
             <button
               onClick={triggerImport}
               disabled={loading}
-              className='bg-green-600 hover:bg-green-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors'
+              className='bg-green-600 hover:bg-green-700 text-white px-3 py-1 min-h-[40px] text-xs rounded disabled:opacity-50 transition-colors'
             >
               📥 Importa
             </button>
             <button
               onClick={clearAllPositions}
               disabled={loading}
-              className='bg-red-600 hover:bg-red-700 text-white px-3 py-1 text-xs rounded disabled:opacity-50 transition-colors'
+              className='bg-red-600 hover:bg-red-700 text-white px-3 py-1 min-h-[40px] text-xs rounded disabled:opacity-50 transition-colors'
             >
               🗑️ Pulisci Tutto
             </button>
@@ -1250,7 +1248,7 @@ const VolleyballCourt: React.FC = () => {
                 console.log('🔍 Debug - Squadre correnti:', teamNames);
                 loadFormations();
               }}
-              className='bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 text-xs rounded transition-colors'
+              className='bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 min-h-[40px] text-xs rounded transition-colors'
             >
               🔍 Debug
             </button>
@@ -1277,7 +1275,7 @@ const VolleyballCourt: React.FC = () => {
                   }
                 }
               }}
-              className='bg-red-600 hover:bg-red-700 text-white px-3 py-1 text-xs rounded transition-colors'
+              className='bg-red-600 hover:bg-red-700 text-white px-3 py-1 min-h-[40px] text-xs rounded transition-colors'
               title='Reset completo del database (cancella tutti i dati)'
             >
               🔄 Reset DB
@@ -1313,7 +1311,7 @@ const VolleyballCourt: React.FC = () => {
                   liberoModeHome
                     ? 'bg-yellow-500 text-white shadow-lg hover:bg-yellow-600'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                } ${isMobile ? 'min-h-[36px] text-xs' : 'text-sm'}`}
+                } ${isMobile ? 'min-h-[40px] text-xs' : 'text-sm'}`}
                 title='Attiva/Disattiva Libero per squadra casa (sostituisce C1/C2 in seconda linea)'
               >
                 🟡 {isMobile ? 'L' : 'L Casa'}
@@ -1329,7 +1327,7 @@ const VolleyballCourt: React.FC = () => {
                   liberoModeAway
                     ? 'bg-yellow-500 text-white shadow-lg hover:bg-yellow-600'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                } ${isMobile ? 'min-h-[36px] text-xs' : 'text-sm'}`}
+                } ${isMobile ? 'min-h-[40px] text-xs' : 'text-sm'}`}
                 title='Attiva/Disattiva Libero per squadra ospiti (sostituisce C1/C2 in seconda linea)'
               >
                 🟡 {isMobile ? 'L' : 'L Ospiti'}

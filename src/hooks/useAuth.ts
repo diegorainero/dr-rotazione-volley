@@ -26,11 +26,28 @@ export const useAuth = () => {
 
   useEffect(() => {
     setIsLoading(true);
+    let mounted = true;
 
-    const unsubscribe = auth.onAuthStateChanged(handleAuthStateChange);
+    const unsubscribe = auth.onAuthStateChanged((nextUser) => {
+      if (!mounted) {
+        return;
+      }
+      handleAuthStateChange(nextUser);
+    });
+
+    // Bounded timeout: never stay stuck on "Caricamento..." when Firebase
+    // cannot reach the network (e.g. offline tablet). The auth subscription
+    // above stays active and will update the user whenever it resolves.
+    const timeout = setTimeout(() => {
+      if (mounted) {
+        setIsLoading(false);
+      }
+    }, 2000);
 
     // Cleanup garantito
     return () => {
+      mounted = false;
+      clearTimeout(timeout);
       unsubscribe();
     };
   }, [handleAuthStateChange]);

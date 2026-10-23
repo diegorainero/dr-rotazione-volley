@@ -37,8 +37,11 @@ export const useResponsiveCanvas = ({
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
 
-      // Riserva spazio per header e controlli (circa 200px)
-      const availableHeight = viewportHeight - 200;
+      // Riserva spazio per header, titolo app e controlli principali.
+      // Su viewport bassi (tablet in landscape ~800px) la riserva cresce per
+      // tenere campo + pulsanti di rotazione visibili senza overflow verticale.
+      const reservedHeight = viewportHeight < 900 ? 340 : 200;
+      const availableHeight = Math.max(150, viewportHeight - reservedHeight);
       const availableWidth = Math.min(viewportWidth - 40, maxWidth); // 40px per padding laterale
 
       // Calcola scale in base a larghezza e altezza disponibili
