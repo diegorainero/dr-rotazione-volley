@@ -96,7 +96,7 @@ jobs:
         run: |
           # CARGO_APK_RELEASE_KEYSTORE (set above) already points at either the
           # repository release keystore or the CI throwaway one.
-          SKIP_BUILD=1 KS_PASS="$KS_PASS" KS="$CARGO_APK_RELEASE_KEYSTORE" \
+          SKIP_BUILD=1 SKIP_INSTALL=1 KS_PASS="$KS_PASS" KS="$CARGO_APK_RELEASE_KEYSTORE" \
             bash scripts/kitkat-apk.sh --skip-build --out rotazioni-android.apk
 
       - name: Verify APK

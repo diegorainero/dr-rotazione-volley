@@ -173,9 +173,10 @@ readelf -d "$LIBDIR/librotazioni.so" | grep -cE 'VERNEED|VERSYM' || true
 echo "==> dynsym with @version (expect none):"
 readelf --dyn-syms -W "$LIBDIR/librotazioni.so" | grep -c '@' || true
 
-# 6) Install, launch, verify on the tablet.
-if [[ "${SKIP_INSTALL:-0}" == "1" ]]; then
-    echo "==> SKIP_INSTALL=1: skipping device verification"
+# 6) Install, launch, verify on the tablet. Only attempted when a device is
+# actually reachable (SKIP_INSTALL=1 or no adb, e.g. on CI, skips this).
+if [[ "${SKIP_INSTALL:-0}" == "1" ]] || ! command -v adb >/dev/null 2>&1; then
+    echo "==> SKIP_INSTALL=1 or adb unavailable: skipping device verification"
     exit 0
 fi
 adb -s "$SERIAL" install -r "$OUT"
