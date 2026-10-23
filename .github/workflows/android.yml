@@ -1,0 +1,132 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'assets/**'
+      - 'vendor/**'
+      - 'res/**'
+      - '.cargo/**'
+      - 'scripts/kitkat-apk.sh'
+      - '.github/workflows/android.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'assets/**'
+      - 'vendor/**'
+      - 'res/**'
+      - '.cargo/**'
+      - 'scripts/kitkat-apk.sh'
+      - '.github/workflows/android.yml'
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust with Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, armv7-linux-androideabi
+
+      - name: Cargo cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: android
+
+      - name: Install cargo-apk
+        run: cargo install cargo-apk --locked
+
+      - name: Install NDK and SDK packages
+        run: >-
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true;
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install
+          "ndk;27.2.12479018"
+          "platforms;android-34"
+          "build-tools;34.0.0"
+          > /dev/null
+
+      - name: Run unit tests
+        run: cargo test --lib
+
+      - name: Prepare signing keystore
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_B64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ]; then
+            echo "Using repository secrets for release signing"
+            printf '%s' "$ANDROID_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+            echo "CARGO_APK_RELEASE_KEYSTORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+            echo "CARGO_APK_RELEASE_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          else
+            echo "No signing secrets: generating throwaway keystore (CI-only signature)"
+            keytool -genkeypair -keystore "$RUNNER_TEMP/release.keystore" \
+              -alias rotazioni -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass rotazioni-ci -keypass rotazioni-ci \
+              -dname "CN=rotazioni CI, OU=CI, O=etinet, L=None, S=None, C=IT"
+            echo "CARGO_APK_RELEASE_KEYSTORE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+            echo "CARGO_APK_RELEASE_KEYSTORE_PASSWORD=rotazioni-ci" >> "$GITHUB_ENV"
+          fi
+
+      # KitKat's dynamic linker resolves symbols through DT_HASH only and has
+      # no symbol-version support: cargo apk build ignores .cargo/config.toml,
+      # so the sysv hash style must be forced via RUSTFLAGS here.
+      - name: Build release APK (armv7, KitKat hash style)
+        env:
+          RUSTFLAGS: -C link-arg=-Wl,--hash-style=sysv
+        run: cargo apk build --release --lib --target armv7-linux-androideabi
+
+      - name: Patch KitKat versioning tags, align and re-sign
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD || 'rotazioni-ci' }}
+        run: |
+          # CARGO_APK_RELEASE_KEYSTORE (set above) already points at either the
+          # repository release keystore or the CI throwaway one.
+          SKIP_BUILD=1 KS_PASS="$KS_PASS" KS="$CARGO_APK_RELEASE_KEYSTORE" \
+            bash scripts/kitkat-apk.sh --skip-build --out rotazioni-android.apk
+
+      - name: Verify APK
+        run: |
+          rm -rf /tmp/verify && mkdir -p /tmp/verify
+          unzip -o -q rotazioni-android.apk "lib/*" -d /tmp/verify
+          "$ANDROID_HOME/build-tools/34.0.0/aapt2" dump badging rotazioni-android.apk \
+            | grep -E "^package:|sdkVersion|native-code"
+          echo "=== dynamic tags of librotazioni.so (expect HASH, no GNU_HASH, no VERNEED/VERSYM) ==="
+          readelf -d /tmp/verify/lib/armeabi-v7a/librotazioni.so | grep -iE "HASH|VERNEED|VERSYM"
+          if readelf -d /tmp/verify/lib/armeabi-v7a/librotazioni.so | grep -q GNU_HASH; then
+            echo "GNU_HASH found: APK would NOT load on KitKat" && exit 1
+          fi
+          if readelf -d /tmp/verify/lib/armeabi-v7a/librotazioni.so | grep -qE "VERNEED|VERSYM"; then
+            echo "versioning tags found: APK would NOT load on KitKat" && exit 1
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rotazioni-android
+          path: rotazioni-android.apk
+          if-no-files-found: error
+
+      - name: Note about APK signature
+        if: always()
+        run: |
+          echo "If no signing secrets were set, the APK is signed with a"
+          echo "throwaway keystore generated in CI. It installs fine, but it"
+          echo "cannot upgrade over an existing installation signed with a"
+          echo "different key: uninstall the old app first."
+          echo "Set ANDROID_KEYSTORE_B64 and ANDROID_KEYSTORE_PASSWORD"
+          echo "repository secrets to sign with your real release keystore."

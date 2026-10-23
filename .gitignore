@@ -23,3 +23,8 @@ yarn-debug.log*
 yarn-error.log*
 
 /src/config/firebase.ts
+
+# Rust native app
+/target
+/rotazioni-data
+*.apk

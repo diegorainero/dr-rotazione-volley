@@ -1,0 +1,7 @@
+# Pre-Android-5 (API < 21) linker support: the old dynamic linker only
+# resolves symbols through SysV hash tables (DT_HASH); GNU hash tables
+# (GNU_HASH, the NDK's default) are rejected, so dlopen fails with
+# "Unable to load native library" on KitKat with no logcat diagnostic.
+# Keep this only for armv7 (the KitKat target): aarch64 devices are all 5.0+.
+[target.armv7-linux-androideabi]
+rustflags = ["-C", "link-arg=-Wl,--hash-style=sysv"]
